@@ -82,7 +82,11 @@ class PatternMatcher:
                     r"problem.*with.*invoice",
                     r"invoice.*error",
                     r"invoice.*concern",
-                    r"invoice.*discrepancy"
+                    r"invoice.*discrepancy",
+                    # ADD these specific submission failure patterns:
+                    r"invoice.*submission.*failed",
+                    r"documents.*were.*not.*processed",
+                    r"submission.*failed"
                 ],
 
                 # You may also add generic patterns to "invoice_errors" if you want to catch some format-related import fails:
@@ -136,58 +140,60 @@ class PatternMatcher:
             
             # ===== NO REPLY =====
             "no_reply": {
-            # Notifications -> Sales/Offers
-            "sales_offers": [
-                r"special\s+offer",
-                r"limited\s+time\s+offer",
-                r"promotional\s+offer",
-                r"sales\s+promotion",
-                r"discount\s+offer"
-            ],
-            # System Alerts -> Processing Errors (not import failures)
-            "processing_errors": [
-                r"processing\s+error",
-                r"failed\s+to\s+process",
-                r"processing\s+failed",
-                r"unable\s+to\s+process",
-                r"error.*processing"
-            ],
-            # Notifications -> Business Closure (Info only)
-            "business_closure_info": [
-                r"business.*closed.*information",
-                r"closure.*notification.*only",
-                r"informing.*closure",
-                r"closure.*update.*only"
-            ],
-            # Tickets/Cases -> Created
-            "ticket_created": [
-                r"ticket.*created",
-                r"case.*opened",
-                r"new.*ticket",
-                r"support\s+(has\s+)?been\s+created",
-    r"assigned\s+#\d+",
-    r"request\s+has\s+been\s+created"
-                r"ticket.*#\d+",
-                r"case.*number.*is",
-                r"support.*request.*created"
-            ],
-            # Tickets/Cases -> Resolved
-            "ticket_resolved": [
-                r"ticket.*resolved",
-                r"case.*closed",
-                r"ticket.*completed",
-                r"case.*resolved",
-                r"support.*request.*completed"
-            ],
-            # Tickets/Cases -> Open (escalate to Manual Review)
-            "ticket_open": [
-                r"ticket.*still.*open",
-                r"case.*remains.*open",
-                r"ticket.*pending",
-                r"case.*in.*progress",
-                r"support.*request.*open"
-            ]
-        },
+                # Notifications -> Sales/Offers
+                "sales_offers": [
+                    r"special\s+offer",
+                    r"limited\s+time\s+offer",
+                    r"promotional\s+offer",
+                    r"sales\s+promotion",
+                    r"discount\s+offer"
+                ],
+                # System Alerts -> Processing Errors (not import failures)
+                "processing_errors": [
+                    r"processing\s+error",
+                    r"failed\s+to\s+process",
+                    r"processing\s+failed",
+                    r"unable\s+to\s+process",
+                    r"error.*processing"
+                ],
+                # Notifications -> Business Closure (Info only)
+                "business_closure_info": [
+                    r"business.*closed.*information",
+                    r"closure.*notification.*only",
+                    r"informing.*closure",
+                    r"closure.*update.*only"
+                ],
+                # Tickets/Cases -> Created
+                "ticket_created": [
+                    r"ticket.*created",
+                    r"case.*opened",
+                    r"new.*ticket",
+                    r"support\s+(has\s+)?been\s+created",
+                    r"assigned\s+#\d+",
+                    r"request\s+has\s+been\s+created",
+                    r"ticket.*#\d+",
+                    r"case.*number.*is",
+                    r"support.*request.*created"
+                ],
+                # Tickets/Cases -> Resolved (ENHANCED)
+                "ticket_resolved": [
+                    r"ticket.*resolved",
+                    r"case.*closed",
+                    r"ticket.*completed",
+                    r"case.*resolved",
+                    r"support.*request.*completed",
+                    r"case.*has.*been.*resolved",
+                    r"your.*case.*has.*been.*resolved"
+                ],
+                # Tickets/Cases -> Open (escalate to Manual Review)
+                "ticket_open": [
+                    r"ticket.*still.*open",
+                    r"case.*remains.*open",
+                    r"ticket.*pending",
+                    r"case.*in.*progress",
+                    r"support.*request.*open"
+                ]
+            },
             
             # ===== INVOICES REQUEST =====
             "invoice_request": {
@@ -336,6 +342,20 @@ class PatternMatcher:
         }
         
         self.logger.info("✅ Comprehensive PatternMatcher initialized with ALL sublabels")
+        
+        # Apply fixes for misclassifications
+        self.update_patterns_for_fixes()
+
+    def update_patterns_for_fixes(self):
+        """Apply additional patterns to fix specific misclassification issues."""
+        try:
+            # No additional compilation needed since patterns were already added above
+            # This method serves as a placeholder for future pattern updates
+            
+            self.logger.info("✅ Pattern fixes applied for misclassification issues")
+            
+        except Exception as e:
+            self.logger.error(f"❌ Error applying pattern fixes: {e}")
 
     def match_text(self, text: str) -> Tuple[Optional[str], Optional[str], float, List[str]]:
         """

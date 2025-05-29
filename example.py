@@ -61,7 +61,7 @@ def process_csv_emails(csv_file_path: str) -> List[Dict[str, Any]]:
                     result['processing_time'] = processing_time
                     
                     # Print results
-    print_results(result)
+                    print_results(result)
     
                     # Save result with cleaned text
                     results.append({
@@ -86,9 +86,11 @@ def process_csv_emails(csv_file_path: str) -> List[Dict[str, Any]]:
                     continue
         
         # Calculate and print performance metrics
-        avg_time = total_time / len(results) if results else 0
+        successful_results = [r for r in results if 'error' not in r]
+        avg_time = total_time / len(successful_results) if successful_results else 0
         logger.info(f"\nPerformance Metrics:")
         logger.info(f"Total Emails Processed: {len(results)}")
+        logger.info(f"Successful Classifications: {len(successful_results)}")
         logger.info(f"Total Processing Time: {total_time:.2f}s")
         logger.info(f"Average Processing Time: {avg_time:.2f}s")
         

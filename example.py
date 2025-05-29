@@ -154,7 +154,7 @@ def save_results(results: List[Dict[str, Any]]) -> None:
 
 def main():
     """Main function to run the classifier test."""
-    csv_file_path = "test_real.csv"
+    csv_file_path = "new.csv"
     process_csv_emails(csv_file_path)
 
 if __name__ == '__main__':

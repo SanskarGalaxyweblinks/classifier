@@ -398,7 +398,7 @@ class RuleEngine:
                 reason="Specific case/support/complex content",
                 matched_rules=["thread_manual_rule"]
             )
-
+    
         # 12. Final Fallback (Very restrictive)
         if len(text_lower.split()) < 5:
             return RuleResult(

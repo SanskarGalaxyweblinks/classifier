@@ -84,14 +84,17 @@ class PatternMatcher:
                 ],
                 
                 "inquiry_redirection": [
-                    # From your thread handler (business responses)
+                    # EXISTING PATTERNS
                     r"insufficient.*data.*provided.*to.*research", r"there.*is.*insufficient.*data",
                     r"please.*ask", r"they.*are.*the.*who.*you.*must.*be.*reaching.*out",
                     r"i.*need.*guidance", r"please.*advise.*what.*is.*needed",
-                    
-                    # Additional patterns
                     r"redirect.*to", r"forward.*to", r"contact.*instead", r"reach.*out.*to",
-                    r"please.*check.*with", r"please.*refer.*to", r"contact.*our.*office"
+                    r"please.*check.*with", r"please.*refer.*to", r"contact.*our.*office",
+                    
+                    # ADD THESE NEW PATTERNS
+                    r"looks.*like.*a.*scam", r"think.*scam", r"verify.*legitimate",
+                    r"are.*you.*legitimate", r"gotten.*scammed", r"verify.*authenticity",
+                    r"please.*provide.*me.*with.*verification", r"verify.*with.*the.*sender"
                 ],
                 
                 "complex_queries": [
@@ -135,12 +138,19 @@ class PatternMatcher:
                 ],
                 
                 "notifications": [
+                    # EXISTING PATTERNS
                     r"system.*notification", r"automated.*notification", r"system.*alert",
                     r"maintenance.*notification", r"service.*update", r"backup.*completed",
                     r"security.*alert", r"delivery.*notification", r"legal.*notice",
                     r"unsubscribe", r"email.*preferences", r"thank.*you.*for.*your.*email",
                     r"thanks.*for.*your.*email", r"thank.*you.*for.*contacting",
-                    r"business.*closure.*information", r"closure.*notification.*only"
+                    r"business.*closure.*information", r"closure.*notification.*only",
+                    
+                    # ADD THESE NEW PATTERNS
+                    r"still.*reviewing", r"will.*get.*back.*to.*you", r"reviewing.*this.*invoice",
+                    r"currently.*reviewing", r"under.*review", r"in.*progress", r"processing.*your.*request",
+                    r"we.*are.*reviewing", r"our.*return.*#.*is", r"correct.*number.*is",
+                    r"updated.*information", r"for.*your.*records"
                 ]
             },
             
@@ -231,8 +241,14 @@ class PatternMatcher:
                 ],
                 
                 "survey": [
+                    # EXISTING PATTERNS
                     r"survey", r"feedback.*request", r"rate.*our.*service", r"customer.*satisfaction",
-                    r"please.*rate", r"take.*short.*survey"
+                    r"please.*rate", r"take.*short.*survey",
+                    
+                    # ADD THESE NEW PATTERNS
+                    r"feedback.*is.*important", r"take.*our.*survey", r"complete.*the.*online.*survey",
+                    r"please.*visit.*the.*survey", r"survey.*web.*site.*link", r"feedback.*on.*the.*support",
+                    r"would.*appreciate.*your.*feedback", r"click.*here.*to.*complete.*survey"
                 ]
             }
         }

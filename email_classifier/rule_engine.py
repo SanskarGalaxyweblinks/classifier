@@ -348,6 +348,20 @@ class RuleEngine:
                 reason="Business response requiring manual review",
                 matched_rules=["thread_business_response"]
             )
+        # Fraud/Scam Concern Detection
+        fraud_concern_patterns = [
+            r"looks.*like.*a.*scam", r"consider.*this.*a.*scam", r"think.*scam", 
+            r"verify.*legitimate", r"are.*you.*legitimate", r"gotten.*scammed", 
+            r"verify.*authenticity", r"if.*you.*are.*legitimate", r"otherwise.*consider.*scam"
+        ]
+        if any(re.search(pattern, text_lower) for pattern in fraud_concern_patterns):
+            return RuleResult(
+                category="Manual Review",
+                subcategory="Inquiry/Redirection",
+                confidence=0.93,
+                reason="Fraud/scam concern - needs verification",
+                matched_rules=["thread_fraud_concern"]
+        )
 
         # 8. Ticket Creation
         ticket_phrases = ["ticket created", "case opened", "assigned #", "case number is"]

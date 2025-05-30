@@ -55,7 +55,13 @@ class PatternMatcher:
                     r"paid.*via.*visa.*transaction",
                     r"payment.*record.*included",
                     r"transaction.*numbers.*included",
-                    r"batch.*numbers.*included"
+                    r"batch.*numbers.*included",
+                    r"paid.*via.*mastercard",
+                    r"paid.*via.*visa", 
+                    r"paid.*via.*credit.*card",
+                    r"paid.*on.*\d+/\d+/\d+",  # This catches "paid on 8/21/23"
+                    r"transaction.*numbers.*are.*included",
+                    r"batch.*numbers.*are.*included"
                 ],
                 
                 "invoice_receipt": [

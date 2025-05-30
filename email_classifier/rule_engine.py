@@ -262,6 +262,20 @@ class RuleEngine:
                 matched_rules=["thread_invoice_request"]
             )
         
+        # Add before step 5 - Status Updates (no action needed)
+        status_update_patterns = [
+            "still.*reviewing", "will.*get.*back.*to.*you", 
+            "currently.*reviewing", "under.*review"
+        ]
+        if any(re.search(pattern, text_lower) for pattern in status_update_patterns):
+            if len(text_lower.split()) < 50:  # Brief status update
+                return RuleResult(
+                    category="No Reply (with/without info)",
+                    subcategory="Notifications",
+                    confidence=0.88,
+                    reason="Status update - no action needed",
+                    matched_rules=["thread_status_update"]
+                )
         # Processing Errors
         processing_error_patterns = [
             "pdf.*not.*attached", "error.*reason", "processing.*error", "cannot.*be.*processed",

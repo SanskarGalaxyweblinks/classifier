@@ -26,7 +26,17 @@ class PatternMatcher:
                     r"partial.*payment", r"dispute.*payment", r"contested.*payment", 
                     r"disagreement.*payment", r"challenge.*payment", r"waive.*charges", 
                     r"cancel.*account", r"charges.*and.*cancel", r"material.*breach",
-                    r"breach.*of.*contract", r"owes.*me", r"owes.*us"
+                    r"breach.*of.*contract", r"owes.*me", r"owes.*us",
+                    
+                    # NEW PATTERNS TO ADD
+                    r"debt.*is.*disputed", r"this.*debt.*is.*disputed",
+                    r"disputed.*and.*not.*properly.*billed", r"billing.*error",
+                    r"not.*properly.*billed", r"billed.*to.*wrong",
+                    r"appropriate.*payor", r"wrong.*entity", r"wrong.*party",
+                    r"dispute.*billing", r"incorrect.*billing",
+                    r"must.*correct.*their.*billing", r"correct.*billing.*error",
+                    r"not.*the.*appropriate", r"billed.*incorrectly",
+                    r"disputing.*this.*debt", r"disputing.*these.*charges"
                 ],
                 
                 "payment_confirmation": [
@@ -80,7 +90,13 @@ class PatternMatcher:
                     r"payment.*will.*be.*sent", r"payment.*is.*being.*processed", r"check.*will.*be.*mailed",
                     r"payment.*scheduled", r"checks.*will.*be.*mailed.*by", r"payment.*timeline",
                     r"payment.*being.*processed", r"invoice.*being.*processed", r"payment.*details",
-                    r"remittance.*info", r"payment.*breakdown"
+                    r"remittance.*info", r"payment.*breakdown",
+                    r"waiting.*to.*receive.*customer.*payments",
+                    r"waiting.*for.*payment.*from",
+                    r"hope.*to.*have.*resolved",
+                    r"payment.*delayed.*due.*to",
+                    r"expecting.*payment.*from"
+
                 ],
                 
                 "inquiry_redirection": [
@@ -90,6 +106,12 @@ class PatternMatcher:
                     r"i.*need.*guidance", r"please.*advise.*what.*is.*needed",
                     r"redirect.*to", r"forward.*to", r"contact.*instead", r"reach.*out.*to",
                     r"please.*check.*with", r"please.*refer.*to", r"contact.*our.*office",
+                    r"is.*there.*any.*type.*of.*paperwork",
+                    r"what.*documentation.*needed",
+                    r"should.*this.*be.*paid.*to",
+                    r"how.*should.*we.*pay",
+                    r"where.*to.*send.*payment",
+                    r"can.*meet.*this.*requirement",
                     
                     # ADD THESE NEW PATTERNS
                     r"looks.*like.*a.*scam", r"think.*scam", r"verify.*legitimate",

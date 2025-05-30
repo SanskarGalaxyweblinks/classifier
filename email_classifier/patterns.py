@@ -1,5 +1,5 @@
 """
-Comprehensive pattern matching for ALL email classification sublabels.
+Enhanced Comprehensive Pattern Matcher - All sublabels with flexible regex patterns
 """
 
 from typing import Dict, List, Tuple, Optional
@@ -12,301 +12,253 @@ class PatternMatcher:
     def __init__(self):
         self.logger = logging.getLogger(__name__)
         
-        # COMPREHENSIVE patterns matching ALL sublabels from your hierarchy
         self.patterns = {
-            # ===== MANUAL REVIEW =====
             "manual_review": {
-                # Disputes & Payments -> Partial/Disputed Payment
                 "partial_disputed_payment": [
-                    r"partial\s+payment",
-                    r"dispute.*payment",
-                    r"contested.*payment", 
-                    r"disagreement.*payment",
-                    r"challenge.*payment",
-                    r"question.*payment"
+                    # From your thread handler
+                    r"amount.*is.*in.*dispute", r"this.*amount.*is.*in.*dispute", r"balance.*is.*not.*ours",
+                    r"balance.*is.*not.*accurate", r"not.*our.*responsibility", r"do.*not.*owe", 
+                    r"contested", r"disagreement", r"refuse", r"formally.*disputing", 
+                    r"not.*accurate", r"that.*not.*my.*bill", r"due.*to.*a.*sale.*of.*property",
+                    r"not.*ours.*due.*to",
+                    
+                    # Additional flexible patterns
+                    r"partial.*payment", r"dispute.*payment", r"contested.*payment", 
+                    r"disagreement.*payment", r"challenge.*payment", r"waive.*charges", 
+                    r"cancel.*account", r"charges.*and.*cancel", r"material.*breach",
+                    r"breach.*of.*contract", r"owes.*me", r"owes.*us"
                 ],
                 
-                # Payment/Invoice Updates -> Payment Confirmation (providing proof)
                 "payment_confirmation": [
-                    r"payment\s+confirmation.*attached",
-                    r"proof\s+of\s+payment.*attached",
-                    r"payment\s+receipt.*attached",
-                    r"confirming.*payment.*proof",
-                    r"evidence\s+of\s+payment",
-                    r"payment\s+documentation.*attached"
+                    r"proof.*of.*payment", r"payment.*confirmation", r"i.*have.*receipt",
+                    r"check.*number", r"eft#", r"confirmation.*#", r"payment.*has.*been.*released",
+                    r"was.*reconciled", r"here.*is.*proof", r"attached.*proof", r"payment.*evidence",
+                    r"payment.*copy", r"wire.*document", r"receipt.*for", r"transaction.*id",
+                    r"payment.*reference", r"voucher.*id", r"cleared.*bank",
+                    r"paid.*via.*transaction.*number",
+                    r"paid.*via.*batch.*number", 
+                    r"transaction.*and.*batch.*numbers",
+                    r"here.*is.*the.*record.*of.*payment",
+                    r"record.*within.*our.*project.*files",
+                    r"paid.*on.*\d+/\d+/\d+.*transaction",
+                    r"paid.*via.*mastercard.*transaction",
+                    r"paid.*via.*visa.*transaction",
+                    r"payment.*record.*included",
+                    r"transaction.*numbers.*included",
+                    r"batch.*numbers.*included"
                 ],
                 
-                # Payment/Invoice Updates -> Invoice Receipt (providing proof)
                 "invoice_receipt": [
-                    r"invoice.*receipt.*attached",
-                    r"proof\s+of\s+invoice.*attached",
-                    r"invoice\s+copy.*attached",
-                    r"invoice\s+documentation.*attached",
-                    r"confirming.*invoice.*received"
+                    r"invoice.*attached", r"invoice.*copy.*attached", r"see.*attached.*invoice",
+                    r"invoice.*is.*attached", r"here.*is.*invoice", r"proof.*of.*invoice",
+                    r"invoice.*receipt", r"invoice.*documentation", r"copy.*of.*invoice.*attached"
                 ],
                 
-                # Business Closure -> Closure Notification
                 "closure_notification": [
-                    r"business.*closed",
-                    r"company.*closed",
-                    r"closed\s+and\s+dissolved",
-                    r"out\s+of\s+business",
-                    r"ceased\s+operations",
-                    r"no\s+longer\s+operating"
+                    r"business.*closed", r"company.*closed", r"out.*of.*business", r"ceased.*operations",
+                    r"filed.*bankruptcy", r"bankruptcy.*protection", r"chapter.*7", r"chapter.*11"
                 ],
                 
-                # Business Closure -> Closure + Payment Due
                 "closure_payment_due": [
-                    r"closed.*payment.*due",
-                    r"business.*closed.*outstanding",
-                    r"closure.*payment.*required",
-                    r"final.*payment.*closure"
+                    r"closed.*payment.*due", r"business.*closed.*outstanding", r"closure.*payment.*required",
+                    r"bankruptcy.*payment", r"filed.*bankruptcy.*payment", r"closure.*with.*payment"
                 ],
                 
-                # Invoices -> External Submission (actionable import failures and issues)
                 "external_submission": [
-                    r"invoice.*not.*imported",
-                    r"failed\s+to\s+import.*invoice",
-                    r"invoice.*could\s+not\s+import",
-                    r"invoice.*failed.*import",
-                    r"not\s+imported.*invoice",
-                    r"could\s+not\s+import.*invoice",
-                    r"import\s+failed.*invoice",
-                    r"import\s+failed",
-                    r"import\s+error.*invoice",
-                    r"unable\s+to\s+import.*invoice",
-                    r"import\s+unsuccessful.*invoice",
-                    r"error.*import.*invoice",
-                    r"failure.*import.*invoice",
-                    r"invoice.*issue",
-                    r"problem.*with.*invoice",
-                    r"invoice.*error",
-                    r"invoice.*concern",
-                    r"invoice.*discrepancy",
-                    # ADD these specific submission failure patterns:
-                    r"invoice.*submission.*failed",
-                    r"documents.*were.*not.*processed",
-                    r"submission.*failed"
+                    r"invoice.*issue", r"invoice.*problem", r"invoice.*error", r"import.*failed",
+                    r"failed.*import", r"invoice.*submission.*failed", r"documents.*not.*processed",
+                    r"submission.*failed", r"unable.*to.*import", r"import.*unsuccessful",
+                    r"could.*not.*import", r"failed.*to.*import", r"error.*importing"
                 ],
-
-                # You may also add generic patterns to "invoice_errors" if you want to catch some format-related import fails:
+                
                 "invoice_errors": [
-                    r"invoice.*missing.*field",
-                    r"invoice.*incomplete",
-                    r"format.*mismatch",
-                    r"invoice.*format.*issue",
-                    r"required.*field.*missing",
-                    # Optionally add some import failure patterns here too if you want double coverage
-                    r"not\s+imported$",
-                    r"was\s+not\s+imported$",
-                    r"could\s+not\s+import$",
-                    r"failed\s+to\s+import$",
-                    r"error.*import",
-                    r"failure.*import"
+                    r"missing.*field", r"format.*mismatch", r"incomplete.*invoice", r"required.*field",
+                    r"invoice.*format.*issue", r"format.*error", r"field.*missing"
                 ],
-
-                # Payment Details Received (manual check needed)
+                
                 "payment_details_received": [
-                    r"payment\s+details.*attached",
-                    r"remittance.*information",
-                    r"payment\s+breakdown",
-                    r"payment\s+summary.*attached",
-                    r"transaction\s+details"
+                    r"payment.*will.*be.*sent", r"payment.*is.*being.*processed", r"check.*will.*be.*mailed",
+                    r"payment.*scheduled", r"checks.*will.*be.*mailed.*by", r"payment.*timeline",
+                    r"payment.*being.*processed", r"invoice.*being.*processed", r"payment.*details",
+                    r"remittance.*info", r"payment.*breakdown"
                 ],
                 
-                # Inquiry/Redirection
                 "inquiry_redirection": [
-                    r"redirect.*to",
-                    r"forward.*to",
-                    r"contact.*instead",
-                    r"please.*reach.*out.*to",
-                    r"inquiry.*redirected",
-                    r"\bplease\s+review\b",
-                    r"\breview\b",
-                    r"\bsee\s+below\b",
-                    r"\bassist\b",
-                    r"\bcheck\b",
-                    r"\bfor\s+your\s+review\b"
+                    # From your thread handler (business responses)
+                    r"insufficient.*data.*provided.*to.*research", r"there.*is.*insufficient.*data",
+                    r"please.*ask", r"they.*are.*the.*who.*you.*must.*be.*reaching.*out",
+                    r"i.*need.*guidance", r"please.*advise.*what.*is.*needed",
+                    
+                    # Additional patterns
+                    r"redirect.*to", r"forward.*to", r"contact.*instead", r"reach.*out.*to",
+                    r"please.*check.*with", r"please.*refer.*to", r"contact.*our.*office"
                 ],
-                # Complex Queries
+                
                 "complex_queries": [
-                    r"multiple.*issues",
-                    r"several.*questions",
-                    r"complex.*situation",
-                    r"detailed.*inquiry",
-                    r"various.*concerns"
+                    r"multiple.*issues", r"several.*questions", r"complex.*situation", r"detailed.*inquiry",
+                    r"various.*concerns", r"legal.*communication", r"attorney.*communication"
                 ]
             },
             
-            # ===== NO REPLY =====
             "no_reply": {
-                # Notifications -> Sales/Offers
-                "sales_offers": [
-                    r"special\s+offer",
-                    r"limited\s+time\s+offer",
-                    r"promotional\s+offer",
-                    r"sales\s+promotion",
-                    r"discount\s+offer"
-                ],
-                # System Alerts -> Processing Errors (not import failures)
                 "processing_errors": [
-                    r"processing\s+error",
-                    r"failed\s+to\s+process",
-                    r"processing\s+failed",
-                    r"unable\s+to\s+process",
-                    r"error.*processing"
+                    # From your thread handler
+                    r"pdf.*file.*is.*not.*attached", r"error.*reason", r"processing.*error", 
+                    r"cannot.*be.*processed", r"electronic.*invoice.*rejected", r"failed.*to.*process", 
+                    r"case.*rejection",
+                    
+                    # Additional patterns
+                    r"processing.*failed", r"unable.*to.*process", r"rejected.*for.*no.*attachment", 
+                    r"mail.*delivery.*failed", r"email.*bounced", r"delivery.*failure", 
+                    r"message.*undelivered", r"bounce.*back", r"email.*cannot.*be.*delivered"
                 ],
-                # Notifications -> Business Closure (Info only)
-                "business_closure_info": [
-                    r"business.*closed.*information",
-                    r"closure.*notification.*only",
-                    r"informing.*closure",
-                    r"closure.*update.*only"
+                
+                "sales_offers": [
+                    r"special.*offer", r"limited.*time.*offer", r"promotional.*offer", 
+                    r"sales.*promotion", r"discount.*offer", r"exclusive.*deal", r"flash.*sale"
                 ],
-                # Tickets/Cases -> Created
-                "ticket_created": [
-                    r"ticket.*created",
-                    r"case.*opened",
-                    r"new.*ticket",
-                    r"support\s+(has\s+)?been\s+created",
-                    r"assigned\s+#\d+",
-                    r"request\s+has\s+been\s+created",
-                    r"ticket.*#\d+",
-                    r"case.*number.*is",
-                    r"support.*request.*created"
+                
+                "import_failures": [
+                    r"import.*failed", r"import.*error", r"failed.*import", r"import.*unsuccessful"
                 ],
-                # Tickets/Cases -> Resolved (ENHANCED)
-                "ticket_resolved": [
-                    r"ticket.*resolved",
-                    r"case.*closed",
-                    r"ticket.*completed",
-                    r"case.*resolved",
-                    r"support.*request.*completed",
-                    r"case.*has.*been.*resolved",
-                    r"your.*case.*has.*been.*resolved"
+                
+                "created": [
+                    r"ticket.*created", r"case.*opened", r"new.*ticket", r"support.*request.*created",
+                    r"case.*number.*is", r"assigned.*#", r"support.*ticket.*opened", 
+                    r"case.*has.*been.*created", r"ticket.*has.*been.*created"
                 ],
-                # Tickets/Cases -> Open (escalate to Manual Review)
-                "ticket_open": [
-                    r"ticket.*still.*open",
-                    r"case.*remains.*open",
-                    r"ticket.*pending",
-                    r"case.*in.*progress",
-                    r"support.*request.*open"
+                
+                "resolved": [
+                    r"ticket.*resolved", r"case.*closed", r"case.*resolved", r"case.*has.*been.*resolved",
+                    r"ticket.*has.*been.*resolved", r"case.*is.*now.*closed", r"request.*completed",
+                    r"moved.*to.*solved", r"marked.*as.*resolved"
+                ],
+                
+                "notifications": [
+                    r"system.*notification", r"automated.*notification", r"system.*alert",
+                    r"maintenance.*notification", r"service.*update", r"backup.*completed",
+                    r"security.*alert", r"delivery.*notification", r"legal.*notice",
+                    r"unsubscribe", r"email.*preferences", r"thank.*you.*for.*your.*email",
+                    r"thanks.*for.*your.*email", r"thank.*you.*for.*contacting",
+                    r"business.*closure.*information", r"closure.*notification.*only"
                 ]
             },
             
-            # ===== INVOICES REQUEST =====
-            "invoice_request": {
-                # Request (No Info) - no details provided
+            "invoices_request": {
                 "request_no_info": [
-                    r"send.*invoice",
-                    r"need.*invoice",
-                    r"please.*send.*invoice",
-                    r"provide.*invoice",
-                    r"invoice.*request",
-                    r"can.*you.*send.*invoice"
+                    # From your thread handler (specific patterns)
+                    r"can.*you.*please.*provide.*me.*with.*outstanding.*invoices",
+                    r"provide.*me.*with.*outstanding.*invoices", r"can.*you.*please.*send.*me.*copies.*of.*any.*invoices",
+                    r"send.*me.*copies.*of.*any.*invoices", r"can.*you.*send.*me.*the.*invoice",
+                    r"provide.*us.*with.*the.*invoice", r"send.*me.*the.*invoice.*copy", r"need.*invoice.*copy",
+                    r"provide.*invoice.*copy", r"send.*us.*invoice.*copy", r"copies.*of.*any.*invoices.*or.*po.*s",
+                    r"outstanding.*invoices.*owed",
+                    
+                    # Additional flexible patterns
+                    r"send.*invoice", r"need.*invoice", r"please.*send.*invoice", r"provide.*invoice",
+                    r"invoice.*request", r"can.*you.*send.*invoice", r"send.*us.*invoice",
+                    r"please.*provide.*invoice", r"invoice.*copy", r"copy.*of.*invoice"
                 ]
             },
             
-            # ===== PAYMENTS CLAIM =====
-            "payment_claim": {
-                # Claims Paid (No Info) - claiming paid but no proof
+            "payments_claim": {
                 "claims_paid_no_info": [
-                    r"payment.*made",
-                    r"check.*sent",
-                    r"already.*paid",
-                    r"payment.*sent",
-                    r"check.*is.*being.*overnighted",
-                    r"paid.*through",
-                    r"payment.*completed"
+                    # From your thread handler (specific patterns)
+                    r"its.*been.*paid", r"has.*been.*settled", r"this.*has.*been.*settled", 
+                    r"already.*paid", r"been.*paid.*to.*them", r"payment.*was.*made", 
+                    r"we.*paid", r"bill.*was.*paid", r"paid.*directly.*to", r"settled.*with",
+                    r"been.*paid.*to", r"we.*sent.*check.*on", r"sent.*check.*on", 
+                    r"check.*on.*april", r"check.*on.*may", r"check.*on.*march",
+                    
+                    # From misclassified emails (flexible patterns)
+                    r"payment.*was.*sent", r"payment.*sent.*today", r"was.*paid.*by.*credit.*card",
+                    r"we.*sent.*payment", r"we.*sent.*payment.*to", r"this.*payment.*has.*already.*been.*sent",
+                    r"this.*was.*paid", r"it.*was.*paid", r"invoices.*are.*being.*processed.*for.*payment",
+                    r"received.*invoices.*are.*being.*processed", r"i.*have.*paid.*my.*account",
+                    r"paid.*my.*account.*via.*cc", r"paid.*via.*cc", r"paid.*last.*friday",
+                    
+                    # Flexible patterns (work for any amount/date/method)
+                    r"payment.*sent", r"sent.*payment", r"payment.*made", r"was.*paid",
+                    r"been.*paid", r"payment.*completed", r"payment.*processed", r"paid.*by",
+                    r"paid.*via", r"paid.*through", r"paid.*on", r"paid.*to", r"sent.*check",
+                    r"check.*sent", r"made.*payment", r"remitted", r"account.*paid",
+                    r"paid.*by.*credit.*card", r"paid.*by.*check", r"wired.*payment", 
+                    r"ach.*payment", r"electronic.*payment", r"settlement", r"resolved.*payment",
+                    
+                    # Frustrated/negative responses
+                    r"should.*not.*be.*getting.*this", r"already.*sent", r"this.*has.*already.*been.*paid",
+                    r"payment.*has.*already.*been.*sent", r"get.*outlook.*for.*ios"
                 ]
             },
             
-            # ===== AUTO REPLY =====
             "auto_reply": {
-                # Out of Office -> With Alternate Contact
-                "out_of_office_alternate": [
-                    r"out.*of.*office.*contact",
-                    r"away.*contact.*instead",
-                    r"unavailable.*please.*contact",
-                    r"out.*of.*office.*reach.*out.*to",
-                    r"\bunavailable\b",
-                    r"\booo\b",
-                    r"back\s+in\s+office\s+on",
-                    r"on\s+leave"
-                ],
-                # Out of Office -> No Info/Autoreply
-                "out_of_office_general": [
-                    r"out\s+of\s+office",
-                    r"away\s+from\s+desk",
-                    r"not\s+available",
-                    r"limited\s+access\s+to\s+email",
-                    r"automatic\s+reply",
-                    r"\booo\b",
-                    r"i'?m\s+on\s+leave",
-                    r"will\s+be\s+out",
-                    r"auto-?reply"
-                ],
-                # Out of Office -> Return Date Specified
-                "out_of_office_return": [
-                    r"return.*on",
-                    r"back.*on",
-                    r"available.*after",
-                    r"returning.*\d+",
-                    r"out.*until.*\d+"
+                "with_alternate_contact": [
+                    r"out.*of.*office.*contact", r"out.*of.*office.*reach.*out", r"contact.*me.*at",
+                    r"please.*contact.*\w+", r"call.*my.*cell", r"call.*my.*mobile", 
+                    r"if.*you.*need.*immediate.*assistance", r"for.*all.*of.*your.*ap.*needs",
+                    r"if.*urgent", r"urgent.*please.*contact", r"alternate.*contact"
                 ],
                 
-                # Confirmations -> Case/Support
-                "case_support_confirmation": [
-                    r"case.*confirmed",
-                    r"support.*request.*confirmed",
-                    r"ticket.*confirmed",
-                    r"request.*acknowledged"
+                "return_date_specified": [
+                    r"out.*of.*office.*until", r"return.*on", r"back.*on", r"available.*after",
+                    r"returning.*\w+", r"will.*be.*back", r"out.*until.*\w+", r"when.*i.*return"
                 ],
                 
-                # Confirmations -> General (Thank You)
-                "general_confirmation": [
-                    r"thank\s+you",
-                    r"thanks",
-                    r"received.*message",
-                    r"got.*your.*request",
-                    r"we.*received.*your"
+                "no_info_autoreply": [
+                    r"out.*of.*office", r"automatic.*reply", r"auto-reply", r"auto.*reply",
+                    r"i.*am.*currently.*out", r"i.*will.*be.*out", r"away.*from.*desk",
+                    r"limited.*access.*to.*email", r"will.*return", r"on.*vacation", r"on.*leave",
+                    r"currently.*traveling", r"do.*not.*reply", r"no-reply", r"noreply",
+                    r"automated.*response", r"service.*account", r"system.*generated"
                 ],
                 
-                # Miscellaneous -> Survey
-                "survey": [
-                    r"survey",
-                    r"feedback.*request",
-                    r"rate.*our.*service",
-                    r"customer.*satisfaction",
-                    r"please.*rate"
-                ],
-                
-                # Miscellaneous -> Redirects/Updates (property changes)
                 "redirects_updates": [
-                    r"property.*manager.*changed",
-                    r"contact.*information.*updated",
-                    r"new.*contact.*person",
-                    r"department.*changed",
-                    r"forwarding.*to.*new"
+                    # From your thread handler
+                    r"is.*no.*longer.*with", r"please.*direct.*all.*future.*inquiries.*to", r"not.*accounts.*payable",
+                    r"please.*contact", r"direct.*inquiries.*to", r"no.*longer.*employed",
+                    r"please.*contact.*hd.*supply", r"contact.*the.*vendor.*directly", r"starting.*may.*1",
+                    r"no.*longer.*be.*accepted", r"now.*using", r"please.*submit.*all.*future",
+                    
+                    # Additional patterns
+                    r"no.*longer.*employed", r"contact.*changed", r"new.*contact", r"property.*manager",
+                    r"department.*changed", r"quarantine.*report", r"contact.*redirection", r"forwarding.*to"
+                ],
+                
+                "case_support": [
+                    r"thank.*you.*for.*reaching.*out.*to.*us", r"we.*have.*received.*your.*request",
+                    r"support.*team.*will.*review", r"member.*of.*our.*team.*will.*follow.*up",
+                    r"case.*confirmed", r"support.*request.*confirmed", r"ticket.*confirmed"
+                ],
+                
+                "survey": [
+                    r"survey", r"feedback.*request", r"rate.*our.*service", r"customer.*satisfaction",
+                    r"please.*rate", r"take.*short.*survey"
                 ]
             }
         }
         
-        # Compile all patterns
+        # Compile patterns
         self.compiled_patterns = {}
-        for main_category, subcategories in self.patterns.items():
-            self.compiled_patterns[main_category] = {}
-            for subcategory, patterns in subcategories.items():
-                self.compiled_patterns[main_category][subcategory] = [
-                    re.compile(pattern, re.IGNORECASE) for pattern in patterns
+        for main_cat, subcats in self.patterns.items():
+            self.compiled_patterns[main_cat] = {}
+            for subcat, patterns in subcats.items():
+                self.compiled_patterns[main_cat][subcat] = [
+                    re.compile(pattern, re.IGNORECASE | re.DOTALL) for pattern in patterns
                 ]
         
-        # Map subcategories to proper label names
-        self.sublabel_names = {
+        # Category mappings
+        self.main_categories = {
+            "manual_review": "Manual Review",
+            "no_reply": "No Reply (with/without info)",
+            "invoices_request": "Invoices Request", 
+            "payments_claim": "Payments Claim",
+            "auto_reply": "Auto Reply (with/without info)"
+        }
+        
+        self.sublabels = {
             "partial_disputed_payment": "Partial/Disputed Payment",
-            "payment_confirmation": "Payment Confirmation", 
-            "invoice_receipt": "Invoice Receipt",
+            "payment_confirmation": "Payment Confirmation",
+            "invoice_receipt": "Invoice Receipt", 
             "closure_notification": "Closure Notification",
             "closure_payment_due": "Closure + Payment Due",
             "external_submission": "External Submission",
@@ -314,76 +266,51 @@ class PatternMatcher:
             "payment_details_received": "Payment Details Received",
             "inquiry_redirection": "Inquiry/Redirection",
             "complex_queries": "Complex Queries",
-            "sales_offers": "Sales/Offers",
             "processing_errors": "Processing Errors",
-            "business_closure_info": "Business Closure (Info only)",
-            "ticket_created": "Created",
-            "ticket_resolved": "Resolved",
-            "ticket_open": "Open",
+            "sales_offers": "Sales/Offers", 
+            "import_failures": "Import Failures",
+            "created": "Created",
+            "resolved": "Resolved",
+            "notifications": "Notifications",
             "request_no_info": "Request (No Info)",
             "claims_paid_no_info": "Claims Paid (No Info)",
-            "out_of_office_alternate": "With Alternate Contact",
-            "out_of_office_general": "No Info/Autoreply",
-            "out_of_office_return": "Return Date Specified",
-            "case_support_confirmation": "Case/Support",
-            "general_confirmation": "General (Thank You)",
-            "survey": "Survey",
-            "redirects_updates": "Redirects/Updates (property changes)"
-        }
-
-        
-        # Map to main categories
-        self.main_category_names = {
-            "manual_review": "Manual Review",
-            "no_reply": "No Reply (with/without info)",
-            "invoice_request": "Invoices Request",
-            "payment_claim": "Payments Claim", 
-            "auto_reply": "Auto Reply (with/without info)"
+            "with_alternate_contact": "With Alternate Contact",
+            "return_date_specified": "Return Date Specified", 
+            "no_info_autoreply": "No Info/Autoreply",
+            "redirects_updates": "Redirects/Updates (property changes)",
+            "case_support": "Case/Support",
+            "survey": "Survey"
         }
         
-        self.logger.info("✅ Comprehensive PatternMatcher initialized with ALL sublabels")
-        
-        # Apply fixes for misclassifications
-        self.update_patterns_for_fixes()
+        self.logger.info("Enhanced PatternMatcher initialized with comprehensive patterns")
 
-    def update_patterns_for_fixes(self):
-        """Apply additional patterns to fix specific misclassification issues."""
-        try:
-            # No additional compilation needed since patterns were already added above
-            # This method serves as a placeholder for future pattern updates
-            
-            self.logger.info("✅ Pattern fixes applied for misclassification issues")
-            
-        except Exception as e:
-            self.logger.error(f"❌ Error applying pattern fixes: {e}")
-
-    def match_text(self, text: str) -> Tuple[Optional[str], Optional[str], float, List[str]]:
-        """
-        Match text against all patterns and return best match.
-        Returns: (main_category, subcategory, confidence, matched_patterns)
-        """
+    def match_text(self, text: str, exclude_external_proof: bool = False) -> Tuple[Optional[str], Optional[str], float, List[str]]:
+        """Match text against patterns with optional external proof exclusion"""
         if not text:
             return None, None, 0.0, []
         
-        text = text.lower()
+        text_lower = text.lower()
+        
+        # External proof exclusion for payment confirmation
+        if exclude_external_proof and self.has_external_proof_reference(text_lower):
+            return None, None, 0.0, []
+        
         best_match = None
         best_confidence = 0.0
         best_patterns = []
         
-        # Check all categories and subcategories
-        for main_cat, subcategories in self.compiled_patterns.items():
-            for subcat, patterns in subcategories.items():
-                matches = []
+        for main_cat, subcats in self.compiled_patterns.items():
+            for subcat, patterns in subcats.items():
+                matches = 0
                 matched_patterns = []
                 
                 for pattern in patterns:
-                    if pattern.search(text):
-                        matches.append(pattern.pattern)
+                    if pattern.search(text_lower):
+                        matches += 1
                         matched_patterns.append(pattern.pattern)
                 
-                if matches:
-                    # Calculate confidence based on number of matches
-                    confidence = min(len(matches) * 0.3, 1.0)
+                if matches > 0:
+                    confidence = min(0.8 + (matches * 0.05), 0.95)
                     
                     if confidence > best_confidence:
                         best_confidence = confidence
@@ -393,22 +320,60 @@ class PatternMatcher:
         if best_match:
             main_cat, subcat = best_match
             return (
-                self.main_category_names[main_cat],
-                self.sublabel_names[subcat], 
+                self.main_categories[main_cat],
+                self.sublabels[subcat],
                 best_confidence,
                 best_patterns
             )
         
         return None, None, 0.0, []
 
-    def get_all_patterns(self) -> Dict:
-        """Return all patterns for debugging."""
-        return self.patterns
-    
-    def get_pattern_count(self) -> Dict[str, int]:
-        """Get count of patterns per category."""
-        counts = {}
-        for main_cat, subcats in self.patterns.items():
-            total = sum(len(patterns) for patterns in subcats.values())
-            counts[main_cat] = total
-        return counts
+    def has_external_proof_reference(self, text: str) -> bool:
+        """Check if text refers to external proof rather than providing proof"""
+        external_proof_phrases = [
+            "if you look at your own email", "you will see it was settled", 
+            "you sent an email confirming", "please consult your client",
+            "check with your client", "consult your client who hired you",
+            "you have the confirmation", "look at your records", "check your records"
+        ]
+        return any(phrase in text.lower() for phrase in external_proof_phrases)
+
+    def get_payment_claim_match(self, text: str) -> bool:
+        """Quick check for payment claims"""
+        if not text:
+            return False
+        
+        patterns = self.compiled_patterns.get("payments_claim", {}).get("claims_paid_no_info", [])
+        text_lower = text.lower()
+        
+        return any(pattern.search(text_lower) for pattern in patterns)
+
+    def get_dispute_match(self, text: str) -> bool:
+        """Quick check for disputes"""
+        if not text:
+            return False
+        
+        patterns = self.compiled_patterns.get("manual_review", {}).get("partial_disputed_payment", [])
+        text_lower = text.lower()
+        
+        return any(pattern.search(text_lower) for pattern in patterns)
+
+    def get_invoice_request_match(self, text: str) -> bool:
+        """Quick check for invoice requests"""
+        if not text:
+            return False
+        
+        patterns = self.compiled_patterns.get("invoices_request", {}).get("request_no_info", [])
+        text_lower = text.lower()
+        
+        return any(pattern.search(text_lower) for pattern in patterns)
+
+    def get_processing_error_match(self, text: str) -> bool:
+        """Quick check for processing errors"""
+        if not text:
+            return False
+        
+        patterns = self.compiled_patterns.get("no_reply", {}).get("processing_errors", [])
+        text_lower = text.lower()
+        
+        return any(pattern.search(text_lower) for pattern in patterns)

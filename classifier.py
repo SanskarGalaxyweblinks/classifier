@@ -89,7 +89,8 @@ class EmailClassifier:
                 processed.cleaned_text,
                 analysis=analysis,
                 ml_result=ml_result,
-                has_thread=processed.has_thread
+                has_thread=processed.has_thread,
+                subject=processed.cleaned_subject  # ADD THIS LINE
             )
             
             # STEP 5: Create final result in EXACT original format

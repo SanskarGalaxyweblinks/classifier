@@ -122,7 +122,8 @@ class PatternMatcher:
                     # ADD THESE NEW PATTERNS
                     r"looks.*like.*a.*scam", r"think.*scam", r"verify.*legitimate",
                     r"are.*you.*legitimate", r"gotten.*scammed", r"verify.*authenticity",
-                    r"please.*provide.*me.*with.*verification", r"verify.*with.*the.*sender"
+                    r"please.*provide.*me.*with.*verification", r"verify.*with.*the.*sender",
+                    r"if.*you.*are.*legitimate",r"consider.*this.*a.*scam",r"otherwise.*consider.*scam"
                 ],
                 
                 "complex_queries": [

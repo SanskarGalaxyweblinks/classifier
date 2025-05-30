@@ -1,7 +1,3 @@
-"""
-Email preprocessing module for cleaning and extracting actionable text.
-"""
-
 import re
 import logging
 import unicodedata
@@ -12,6 +8,12 @@ from dataclasses import dataclass
 import time
 
 logger = logging.getLogger(__name__)
+
+# Add multi-line Outlook/Gmail thread block regex
+OUTLOOK_THREAD_BLOCK = re.compile(
+    r"(^From: .+\n^Sent: .+\n^To: .+\n(^Cc: .+\n)?^Subject: .+$)",
+    re.MULTILINE | re.IGNORECASE
+)
 
 @dataclass
 class ProcessedEmail:
@@ -47,6 +49,11 @@ class EmailPreprocessor:
         
         # Reference tracking
         r'Ref:MSG[A-Za-z0-9]+',
+
+        # [OPTIONAL] Legal disclaimers
+        # r'The information transmitted \(including attachments\) is covered by the Electronic Communications Privacy Act.*',
+        # r'Confidentiality Notice:.*',
+        # r'If you received this in error, please contact the sender.*'
     ]
 
     # ====== STRONG THREAD SEPARATORS (for cutting threads) ======
@@ -226,7 +233,16 @@ class EmailPreprocessor:
         """Extract current message for current_reply field."""
         logger.info(f"Starting current reply extraction. Text length: {len(text)}")
         
-        # Find the first thread separator
+        # Priority: Outlook/Gmail block, then other patterns
+        match = OUTLOOK_THREAD_BLOCK.search(text)
+        if match:
+            content_before = text[:match.start()].strip()
+            if len(content_before) >= 50:
+                logger.info(f"Found Outlook thread block, extracted current reply")
+                return content_before
+            else:
+                logger.info(f"Outlook thread block found but content too short, keeping full text")
+        
         for pattern in self.compiled_thread_separators:
             match = pattern.search(text)
             if match:
@@ -254,7 +270,7 @@ class EmailPreprocessor:
         """Clean FULL EMAIL BODY - remove threads but preserve business content."""
         logger.info(f"Starting full body cleaning. Original length: {len(text)}")
         
-        # STEP 1: Remove thread content first
+        # STEP 1: Remove thread content first (Outlook/Gmail then patterns)
         text = self._remove_thread_content(text)
         logger.info(f"After thread removal: {len(text)}")
         
@@ -297,14 +313,20 @@ class EmailPreprocessor:
         """Remove thread content but keep current business message."""
         logger.info("Starting thread content removal")
         
-        # Try each thread separator pattern
+        # Priority: Outlook/Gmail block, then other patterns
+        match = OUTLOOK_THREAD_BLOCK.search(text)
+        if match:
+            content_before = text[:match.start()].strip()
+            if len(content_before) >= 30:
+                logger.info(f"Found Outlook thread block, keeping content before it (length: {len(content_before)})")
+                return content_before
+            else:
+                logger.info(f"Outlook thread block found but content too short, keeping full text")
+        
         for pattern in self.compiled_thread_separators:
             match = pattern.search(text)
             if match:
-                # Get content before the thread marker
                 content_before = text[:match.start()].strip()
-                
-                # If there's substantial content before, keep only that
                 if len(content_before) >= 30:
                     logger.info(f"Found thread marker, keeping content before it (length: {len(content_before)})")
                     return content_before
@@ -322,3 +344,5 @@ class EmailPreprocessor:
     def _is_html(self, text: str) -> bool:
         """Check if text contains HTML."""
         return bool(re.search(r'<[^>]+>', text))
+
+    

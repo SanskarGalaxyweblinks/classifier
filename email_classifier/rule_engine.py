@@ -604,6 +604,17 @@ class RuleEngine:
                         "Manual Review", "Partial/Disputed Payment", 0.95,
                         "Dispute/contest detected", ["dispute_detected"]
                     )
+                
+                sales_phrases = [
+                    "sale ends", "% off", "discount", "save now", "shop now", 
+                    "limited time offer", "memorial day sale", "summer sale",
+                    "unsubscribe", "no longer want to receive"
+                ]
+                if any(phrase in text_lower for phrase in sales_phrases):
+                    return RuleResult(
+                        "No Reply (with/without info)", "Sales/Offers", 0.95,
+                        "Promotional/sales email detected", ["sales_email_detected"]
+                    )
 
                 # 4.5. Payment with Transaction/Proof Details (HIGHER PRIORITY than claims)
                 transaction_proof_patterns = [
@@ -612,12 +623,13 @@ class RuleEngine:
                     r"transaction.*and.*batch", r"paid.*via.*\w+.*transaction"
                 ]
                 if any(re.search(pattern, text_lower) for pattern in transaction_proof_patterns):
-                    # Check if it's about payment
-                    if any(word in text_lower for word in ['paid', 'payment', 'settled']):
-                        return RuleResult(
-                            "Manual Review", "Payment Confirmation", 0.94,
-                            "Payment with transaction/proof details", ["payment_with_transaction_proof"]
-                        )
+                    # Exclude if it's a promotional email
+                    if not any(phrase in text_lower for phrase in ["% off", "sale ends", "shop now", "unsubscribe"]):
+                        if any(word in text_lower for word in ['paid', 'payment', 'settled']):
+                            return RuleResult(
+                                "Manual Review", "Payment Confirmation", 0.94,
+                                "Payment with transaction/proof details", ["payment_with_transaction_proof"]
+                            )
                     
                 # 5. Enhanced Payment Claims (EARLY)  
                 payment_claims = [

@@ -276,6 +276,22 @@ class RuleEngine:
                 matched_rules=["thread_processing_error"]
             )
 
+        # Payment Status/Inquiry Detection
+        payment_inquiry_patterns = [
+            "waiting.*to.*receive.*payment", "waiting.*for.*payment",
+            "should.*this.*be.*paid", "how.*should.*we.*pay",
+            "where.*to.*send.*payment", "when.*will.*payment",
+            "hope.*to.*have.*resolved", "payment.*delayed"
+        ]
+        if any(re.search(pattern, text_lower) for pattern in payment_inquiry_patterns):
+            return RuleResult(
+                category="Manual Review",
+                subcategory="Inquiry/Redirection",
+                confidence=0.93,
+                reason="Payment inquiry or status update",
+                matched_rules=["thread_payment_inquiry"]
+            )
+
         # 6. Contact Redirection (Keep existing)
         redirect_phrases = [
             "no longer with", "please contact", "direct inquiries to", "no longer employed",

@@ -307,49 +307,49 @@ class PatternMatcher:
         
         # Clean category mappings
         self.main_categories = {
-            "manual_review": "Manual Review",
-            "no_reply": "No Reply (with/without info)",
-            "invoices_request": "Invoices Request",
-            "payments_claim": "Payments Claim",
-            "auto_reply": "Auto Reply (with/without info)"
+            "Manual Review": "Manual Review",
+            "No Reply (with/without info)": "No Reply (with/without info)",
+            "Invoices Request": "Invoices Request", 
+            "Payments Claim": "Payments Claim",
+            "Auto Reply (with/without info)": "Auto Reply (with/without info)"
         }
         
         # Updated sublabel mappings aligned with new hierarchy
         self.sublabels = {
             # Manual Review sublabels
-            "partial_disputed_payment": "Partial/Disputed Payment",
-            "invoice_receipt": "Invoice Receipt",
-            "closure_notification": "Closure Notification", 
-            "closure_payment_due": "Closure + Payment Due",
-            "external_submission": "External Submission",
-            "invoice_errors_format": "Invoice Errors (format mismatch)",
-            "inquiry_redirection": "Inquiry/Redirection",
-            "complex_queries": "Complex Queries",
+            "Partial/Disputed Payment": "Partial/Disputed Payment",
+            "Invoice Receipt": "Invoice Receipt", 
+            "Closure Notification": "Closure Notification",
+            "Closure + Payment Due": "Closure + Payment Due",
+            "External Submission": "External Submission",
+            "Invoice Errors (format mismatch)": "Invoice Errors (format mismatch)",
+            "Inquiry/Redirection": "Inquiry/Redirection",  # ← ADD THIS
+            "Complex Queries": "Complex Queries",
             
             # No Reply sublabels
-            "sales_offers": "Sales/Offers",
-            "system_alerts": "System Alerts", 
-            "processing_errors": "Processing Errors",
-            "business_closure_info": "Business Closure (Info only)",
-            "general_thank_you": "General (Thank You)",
-            "tickets_created": "Created",
-            "tickets_resolved": "Resolved",
-            "tickets_open": "Open",
+            "Sales/Offers": "Sales/Offers",
+            "System Alerts": "System Alerts",
+            "Processing Errors": "Processing Errors", 
+            "Business Closure (Info only)": "Business Closure (Info only)",
+            "General (Thank You)": "General (Thank You)",
+            "Created": "Created",
+            "Resolved": "Resolved",
+            "Open": "Open",
             
             # Invoice Request sublabel
-            "request_no_info": "Request (No Info)",
+            "Request (No Info)": "Request (No Info)",
             
             # Payments Claim sublabels
-            "claims_paid_no_info": "Claims Paid (No Info)",
-            "payment_confirmation": "Payment Confirmation", 
-            "payment_details_received": "Payment Details Received",
+            "Claims Paid (No Info)": "Claims Paid (No Info)",
+            "Payment Details Received": "Payment Details Received",
+            "Payment Confirmation": "Payment Confirmation",
             
             # Auto Reply sublabels
-            "ooo_with_alternate_contact": "With Alternate Contact",
-            "ooo_return_date": "Return Date Specified",
-            "ooo_no_info": "No Info/Autoreply", 
-            "survey": "Survey",
-            "redirects_updates": "Redirects/Updates (property changes)"
+            "With Alternate Contact": "With Alternate Contact",
+            "No Info/Autoreply": "No Info/Autoreply",
+            "Return Date Specified": "Return Date Specified",
+            "Survey": "Survey",
+            "Redirects/Updates (property changes)": "Redirects/Updates (property changes)"
         }
         
         self.logger.info("✅ Clean PatternMatcher initialized")

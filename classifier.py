@@ -50,13 +50,47 @@ class EmailClassifier:
             if not processed.cleaned_text:
                 return self._fallback_result("Empty content", start_time)
             
-            # Get classifications
-            analysis = self.nlp_processor.analyze_text(processed.cleaned_text)
-            ml_result = self.ml_classifier.classify_email(processed.cleaned_text, has_thread=processed.has_thread)
-            rule_result = self.rule_engine.classify_sublabel(
-                ml_result['category'], processed.cleaned_text, 
-                analysis=analysis, ml_result=ml_result, has_thread=processed.has_thread
-            )
+            # Get classifications with individual error handling
+            try:
+                analysis = self.nlp_processor.analyze_text(processed.cleaned_text)
+            except Exception as e:
+                self.logger.warning(f"NLP analysis failed: {e}")
+                analysis = None
+            
+            try:
+                ml_result = self.ml_classifier.classify_email(processed.cleaned_text, has_thread=processed.has_thread)
+            except Exception as e:
+                self.logger.warning(f"ML classification failed: {e}")
+                # Create fallback ML result
+                ml_result = {
+                    'category': 'Manual Review',
+                    'subcategory': 'Complex Queries', 
+                    'confidence': 0.5,
+                    'method_used': 'ml_fallback',
+                    'reason': f'ML error: {e}'
+                }
+            
+            try:
+                rule_result = self.rule_engine.classify_sublabel(
+                    ml_result['category'], processed.cleaned_text, 
+                    analysis=analysis, ml_result=ml_result, has_thread=processed.has_thread,
+                    subject=processed.cleaned_subject
+                )
+            except Exception as e:
+                self.logger.warning(f"Rule engine failed: {e}")
+                # Create fallback rule result
+                from rule_engine import RuleResult  # Adjust import as needed
+                rule_result = RuleResult(
+                    category='Manual Review',
+                    subcategory='Complex Queries',
+                    confidence=0.5,
+                    reason=f'Rule error: {e}',
+                    matched_rules=['rule_fallback']
+                )
+            
+            # Debug logging
+            self.logger.debug(f"Email {email_id}: ML={ml_result['category']}/{ml_result.get('subcategory', 'N/A')}, "
+                            f"Rule={rule_result.category}/{rule_result.subcategory}")
             
             # Create detailed result
             detailed_result = self._get_best_classification(ml_result, rule_result, processed, analysis, start_time)
@@ -67,12 +101,42 @@ class EmailClassifier:
             # Return result with final label
             result = {**detailed_result, 'final_label': final_label}
             
-            self.logger.info(f"Email {email_id}: {detailed_result['category']} → {final_label}")
+            self.logger.info(f"Email {email_id}: {detailed_result['category']}/{detailed_result['subcategory']} → {final_label}")
             return result
             
         except Exception as e:
-            self.logger.error(f"Classification error: {e}")
-            return self._fallback_result(f"Error: {e}", start_time)
+            self.logger.error(f"Classification error for email {email_id}: {e}")
+            import traceback
+            self.logger.error(f"Traceback: {traceback.format_exc()}")
+            return self._fallback_result(f"Critical error: {e}", start_time)
+
+    def debug_classification(self, subject: str, body: str) -> Dict[str, Any]:
+        """Debug method to see classification step-by-step"""
+        print(f"=== DEBUG CLASSIFICATION ===")
+        print(f"Subject: {subject[:50]}...")
+        print(f"Body length: {len(body)}")
+        
+        try:
+            processed = self.preprocessor.preprocess_email(subject, body)
+            print(f"Processed text length: {len(processed.cleaned_text)}")
+            print(f"Has thread: {processed.has_thread}")
+            
+            ml_result = self.ml_classifier.classify_email(processed.cleaned_text, has_thread=processed.has_thread)
+            print(f"ML Result: {ml_result['category']}/{ml_result.get('subcategory', 'N/A')} (conf: {ml_result['confidence']:.2f})")
+            
+            rule_result = self.rule_engine.classify_sublabel(
+                ml_result['category'], processed.cleaned_text, 
+                has_thread=processed.has_thread, subject=processed.cleaned_subject
+            )
+            print(f"Rule Result: {rule_result.category}/{rule_result.subcategory} (conf: {rule_result.confidence:.2f})")
+            
+            return {'ml': ml_result, 'rule': rule_result}
+            
+        except Exception as e:
+            print(f"ERROR: {e}")
+            import traceback
+            print(traceback.format_exc())
+            return {'error': str(e)}
 
     def _get_best_classification(self, ml_result, rule_result, processed, analysis, start_time):
         """Get best classification from ML and Rule results"""

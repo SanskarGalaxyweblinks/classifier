@@ -1,6 +1,6 @@
 """
 Clean Pattern Matcher - Aligned with updated hierarchy structure
-No conflicts, quality patterns only
+Quality code with targeted fixes for misclassifications
 """
 
 from typing import Dict, List, Tuple, Optional
@@ -13,7 +13,7 @@ class PatternMatcher:
     def __init__(self):
         self.logger = logging.getLogger(__name__)
         
-        # Your existing patterns - organized by new hierarchy structure
+        # Clean patterns organized by hierarchy structure
         self.patterns = {
             "Manual Review": {
                 # Disputes & Payments
@@ -33,13 +33,15 @@ class PatternMatcher:
                     
                     # Billing dispute patterns
                     r"debt.*is.*disputed", r"this.*debt.*is.*disputed",
-                    r"disputed.*and.*not.*properly.*billed", r"billing.*error",
+                    r"cease.*and.*desist", r"do.*not.*acknowledge.*debt", r"fdcpa",
+                    r"fair.*debt.*collection.*practices.*act",  # ADDED: Missing FDCPA pattern
+                    r"disputed.*and.*not.*properly.*billed", r"billing.*error.*dispute",  # FIXED: More specific
                     r"not.*properly.*billed", r"billed.*to.*wrong",
                     r"appropriate.*payor", r"wrong.*entity", r"wrong.*party",
                     r"dispute.*billing", r"incorrect.*billing",
                     r"must.*correct.*their.*billing", r"correct.*billing.*error",
                     r"not.*the.*appropriate", r"billed.*incorrectly",
-                    r"disputing.*this.*debt", r"disputing.*these.*charges"
+                    r"disputing.*this.*debt", r"disputing.*these.*charges", r"billing.*is.*wrong",
                 ],
                 
                 # Invoice Updates  
@@ -81,13 +83,9 @@ class PatternMatcher:
                     r"i.*need.*guidance", r"please.*advise.*what.*is.*needed",
                     r"redirect.*to", r"forward.*to", r"contact.*instead", r"reach.*out.*to",
                     r"please.*check.*with", r"please.*refer.*to", r"contact.*our.*office",
-                    r"is.*there.*any.*type.*of.*paperwork",
-                    r"what.*documentation.*needed",
-                    r"should.*this.*be.*paid.*to",
-                    r"how.*should.*we.*pay",
-                    r"where.*to.*send.*payment",
-                    r"can.*meet.*this.*requirement",
-                    
+                    r"is.*there.*any.*type.*of.*paperwork",r"what.*documentation.*needed",
+                    r"should.*this.*be.*paid.*to",r"how.*should.*we.*pay",
+                    r"where.*to.*send.*payment",r"can.*meet.*this.*requirement",
                     # Verification requests
                     r"looks.*like.*a.*scam", r"think.*scam", r"verify.*legitimate",
                     r"are.*you.*legitimate", r"gotten.*scammed", r"verify.*authenticity",
@@ -118,7 +116,9 @@ class PatternMatcher:
                     # Processing failures
                     r"pdf.*file.*is.*not.*attached", r"error.*reason", r"processing.*error", 
                     r"cannot.*be.*processed", r"electronic.*invoice.*rejected", r"failed.*to.*process", 
-                    r"case.*rejection",
+                    r"case.*rejection", r"request.*couldn.*t.*be.*created", 
+                    r"could.*not.*be.*created", r"system.*is.*unable.*to.*process", 
+                    r"powered.*by.*jira.*service.*management",  # ADDED: Missing system error patterns
                     
                     # Delivery failures
                     r"processing.*failed", r"unable.*to.*process", r"rejected.*for.*no.*attachment", 
@@ -152,7 +152,8 @@ class PatternMatcher:
                 "Resolved": [
                     r"ticket.*resolved", r"case.*closed", r"case.*resolved", r"case.*has.*been.*resolved",
                     r"ticket.*has.*been.*resolved", r"case.*is.*now.*closed", r"request.*completed",
-                    r"moved.*to.*solved", r"marked.*as.*resolved"
+                    r"moved.*to.*solved", r"marked.*as.*resolved", r"status.*resolved", r"set.*to.*resolved",
+                    r"ticket.*will.*remain"  # ADDED: Missing resolved pattern
                 ],
                 
                 "Open": [
@@ -168,7 +169,8 @@ class PatternMatcher:
                     r"send.*me.*copies.*of.*any.*invoices", r"can.*you.*send.*me.*the.*invoice",
                     r"provide.*us.*with.*the.*invoice", r"send.*me.*the.*invoice.*copy", r"need.*invoice.*copy",
                     r"provide.*invoice.*copy", r"send.*us.*invoice.*copy", r"copies.*of.*any.*invoices.*or.*po.*s",
-                    r"outstanding.*invoices.*owed",
+                    r"outstanding.*invoices.*owed", r"trying.*to.*get.*detailed.*copy",  # ADDED: Missing patterns
+                    r"get.*detailed.*copy.*of.*billing", r"detailed.*copy.*of.*this.*billing",  # ADDED: Missing patterns
                     
                     # General invoice requests
                     r"send.*invoice", r"need.*invoice", r"please.*send.*invoice", r"provide.*invoice",
@@ -213,25 +215,18 @@ class PatternMatcher:
                     r"was.*reconciled", r"here.*is.*proof", r"attached.*proof", r"payment.*evidence",
                     r"payment.*copy", r"wire.*document", r"receipt.*for", r"transaction.*id",
                     r"payment.*reference", r"voucher.*id", r"cleared.*bank",
+                    r"see.*attachments", r"paid.*see.*attachments",  # ADDED: Missing attachment patterns
+                    r"invoice.*was.*paid.*see.*attachments",  # ADDED: Missing attachment pattern
                     
                     # Transaction details
-                    r"paid.*via.*transaction.*number",
-                    r"paid.*via.*batch.*number", 
-                    r"transaction.*and.*batch.*numbers",
-                    r"here.*is.*the.*record.*of.*payment",
-                    r"record.*within.*our.*project.*files",
-                    r"paid.*on.*\d+/\d+/\d+.*transaction",
-                    r"paid.*via.*mastercard.*transaction",
-                    r"paid.*via.*visa.*transaction",
-                    r"payment.*record.*included",
-                    r"transaction.*numbers.*included",
-                    r"batch.*numbers.*included",
-                    r"paid.*via.*mastercard",
-                    r"paid.*via.*visa", 
-                    r"paid.*via.*credit.*card",
-                    r"paid.*on.*\d+/\d+/\d+",
-                    r"transaction.*numbers.*are.*included",
-                    r"batch.*numbers.*are.*included"
+                    r"paid.*via.*transaction.*number",r"paid.*via.*batch.*number", 
+                    r"transaction.*and.*batch.*numbers",r"here.*is.*the.*record.*of.*payment",
+                    r"record.*within.*our.*project.*files",r"paid.*on.*\d+/\d+/\d+.*transaction",
+                    r"paid.*via.*mastercard.*transaction",r"paid.*via.*visa.*transaction",
+                    r"payment.*record.*included",r"transaction.*numbers.*included",
+                    r"batch.*numbers.*included",r"paid.*via.*mastercard",r"paid.*via.*visa", 
+                    r"paid.*via.*credit.*card",r"paid.*on.*\d+/\d+/\d+",
+                    r"transaction.*numbers.*are.*included",r"batch.*numbers.*are.*included"
                 ],
                 
                 "Payment Details Received": [
@@ -239,12 +234,11 @@ class PatternMatcher:
                     r"payment.*will.*be.*sent", r"payment.*is.*being.*processed", r"check.*will.*be.*mailed",
                     r"payment.*scheduled", r"checks.*will.*be.*mailed.*by", r"payment.*timeline",
                     r"payment.*being.*processed", r"invoice.*being.*processed", r"payment.*details",
-                    r"remittance.*info", r"payment.*breakdown",
-                    r"waiting.*to.*receive.*customer.*payments",
-                    r"waiting.*for.*payment.*from",
-                    r"hope.*to.*have.*resolved",
-                    r"payment.*delayed.*due.*to",
-                    r"expecting.*payment.*from"
+                    r"remittance.*info", r"payment.*breakdown",r"in.*the.*process.*of.*issuing.*payment",
+                    r"invoices.*have.*been.*entered.*and.*routed",r"routed.*for.*approval", 
+                    r"need.*to.*go.*to.*several.*people.*to.*approve",r"waiting.*to.*receive.*customer.*payments",
+                    r"waiting.*for.*payment.*from",r"hope.*to.*have.*resolved",
+                    r"payment.*delayed.*due.*to",r"expecting.*payment.*from"
                 ]
             },
             
@@ -252,9 +246,12 @@ class PatternMatcher:
                 # Out of Office
                 "With Alternate Contact": [
                     r"out.*of.*office.*contact", r"out.*of.*office.*reach.*out", r"contact.*me.*at",
-                    r"please.*contact.*\w+", r"call.*my.*cell", r"call.*my.*mobile", 
+                    r"please.*contact.*me.*at.*\d+",r"please.*contact.*our.*office",
+                    r"if.*you.*need.*immediate.*assistance.*contact",r"call.*my.*cell", r"call.*my.*mobile", 
                     r"if.*you.*need.*immediate.*assistance", r"for.*all.*of.*your.*ap.*needs",
-                    r"if.*urgent", r"urgent.*please.*contact", r"alternate.*contact"
+                    r"if.*urgent", r"urgent.*please.*contact", r"alternate.*contact",
+                    r"out.*of.*office.*contact",
+                    r"please.*contact.*me.*at"
                 ],
                 
                 "Return Date Specified": [
@@ -265,8 +262,9 @@ class PatternMatcher:
                 "No Info/Autoreply": [
                     r"out.*of.*office", r"automatic.*reply", r"auto-reply", r"auto.*reply",
                     r"i.*am.*currently.*out", r"i.*will.*be.*out", r"away.*from.*desk",
-                    r"limited.*access.*to.*email", r"will.*return", r"on.*vacation", r"on.*leave",
-                    r"currently.*traveling", r"do.*not.*reply", r"no-reply", r"noreply",
+                    r"limited.*access.*to.*email", r"will.*return", 
+                    r"i.*am.*on.*vacation",r"i.*am.*on.*leave",
+                    r"on.*leave", r"currently.*traveling", r"do.*not.*reply", r"no-reply", r"noreply",
                     r"automated.*response", r"service.*account", r"system.*generated"
                 ],
                 
@@ -323,7 +321,7 @@ class PatternMatcher:
             "Closure + Payment Due": "Closure + Payment Due",
             "External Submission": "External Submission",
             "Invoice Errors (format mismatch)": "Invoice Errors (format mismatch)",
-            "Inquiry/Redirection": "Inquiry/Redirection",  # ← ADD THIS
+            "Inquiry/Redirection": "Inquiry/Redirection",
             "Complex Queries": "Complex Queries",
             
             # No Reply sublabels
@@ -409,30 +407,30 @@ class PatternMatcher:
         return None, None, 0.0, []
 
     def _resolve_conflicts(self, matches: List[Dict], text: str) -> Optional[Dict]:
-        """Resolve conflicts between multiple matches using priority rules"""
+        """FIXED: Resolve conflicts using correct category names"""
         if not matches:
             return None
         
         if len(matches) == 1:
             return matches[0]
         
-        # Priority rules to resolve conflicts
+        # FIXED: Priority rules with correct category names
         priority_order = [
             # High priority - specific business actions
-            ('payments_claim', 'payment_confirmation'),  # Providing proof vs claiming paid
-            ('manual_review', 'partial_disputed_payment'),  # Disputes are high priority
-            ('no_reply', 'processing_errors'),  # System errors
+            ('Payments Claim', 'Payment Confirmation'),  # FIXED: Correct category names
+            ('Manual Review', 'Partial/Disputed Payment'),  # FIXED: Correct category names
+            ('No Reply (with/without info)', 'Processing Errors'),  # FIXED: Correct category names
             
             # Medium priority - requests and claims  
-            ('invoices_request', 'request_no_info'),
-            ('payments_claim', 'claims_paid_no_info'),
-            ('payments_claim', 'payment_details_received'),
+            ('Invoices Request', 'Request (No Info)'),  # FIXED: Correct category names
+            ('Payments Claim', 'Claims Paid (No Info)'),  # FIXED: Correct category names
+            ('Payments Claim', 'Payment Details Received'),  # FIXED: Correct category names
             
             # Lower priority - notifications and auto replies
-            ('no_reply', 'tickets_created'),
-            ('no_reply', 'tickets_resolved'),
-            ('auto_reply', 'ooo_with_alternate_contact'),
-            ('auto_reply', 'survey'),
+            ('No Reply (with/without info)', 'Created'),  # FIXED: Correct category names
+            ('No Reply (with/without info)', 'Resolved'),  # FIXED: Correct category names
+            ('Auto Reply (with/without info)', 'With Alternate Contact'),  # FIXED: Correct category names
+            ('Auto Reply (with/without info)', 'Survey'),  # FIXED: Correct category names
         ]
         
         # Check priority matches first
@@ -459,28 +457,28 @@ class PatternMatcher:
         """Quick check for payment claims"""
         if not text:
             return False
-        patterns = self.compiled_patterns.get("payments_claim", {}).get("claims_paid_no_info", [])
+        patterns = self.compiled_patterns.get("Payments Claim", {}).get("Claims Paid (No Info)", [])
         return any(pattern.search(text.lower()) for pattern in patterns)
 
     def get_dispute_match(self, text: str) -> bool:
         """Quick check for disputes"""
         if not text:
             return False
-        patterns = self.compiled_patterns.get("manual_review", {}).get("partial_disputed_payment", [])
+        patterns = self.compiled_patterns.get("Manual Review", {}).get("Partial/Disputed Payment", [])
         return any(pattern.search(text.lower()) for pattern in patterns)
 
     def get_invoice_request_match(self, text: str) -> bool:
         """Quick check for invoice requests"""
         if not text:
             return False
-        patterns = self.compiled_patterns.get("invoices_request", {}).get("request_no_info", [])
+        patterns = self.compiled_patterns.get("Invoices Request", {}).get("Request (No Info)", [])
         return any(pattern.search(text.lower()) for pattern in patterns)
 
     def get_processing_error_match(self, text: str) -> bool:
         """Quick check for processing errors"""
         if not text:
             return False
-        patterns = self.compiled_patterns.get("no_reply", {}).get("processing_errors", [])
+        patterns = self.compiled_patterns.get("No Reply (with/without info)", {}).get("Processing Errors", [])
         return any(pattern.search(text.lower()) for pattern in patterns)
 
     def get_pattern_info(self) -> Dict:

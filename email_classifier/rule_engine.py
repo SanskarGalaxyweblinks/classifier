@@ -407,16 +407,162 @@ class RuleEngine:
 
     def _handle_thread_email(self, text: str) -> RuleResult:
         """
-        Clean thread handler - Uses PatternMatcher FIRST, then essential fallbacks
-        Works properly with classify_sublabel function
+        Enhanced thread handler with quality business context exclusion
+        Prevents business emails from being misclassified as auto-reply
         """
         text_lower = text.lower().strip()
+
+        # PRIORITY 0: Enhanced Business Context Exclusion (HIGHEST PRIORITY)
+        business_exclusions = [
+            'account#', 'file#', 'client', 'owe', 'debt', 'collection', 'payment', 'bill',
+            'contract', 'canceled', 'cancelled', 'invoice', 'billing', 'balance', 'due',
+            'outstanding', 'vendor', 'purchase', 'receipt', 'transaction'
+        ]
         
-        # 1. OUT OF OFFICE - MUST WORK (High priority check)
-        ooo_phrases = ["out of office", "automatic reply", "auto-reply", "auto reply", "away from desk", "on leave"]
+        # Enhanced business pattern detection
+        business_patterns = [
+            r"please.*contact.*our.*[a-z]*.*department", r"contact.*our.*office",
+            r"insufficient.*data.*provided", r"please.*provide.*verification",
+            r"account.*number", r"invoice.*number", r"reference.*number"
+        ]
+        
+        has_business_terms = any(term in text_lower for term in business_exclusions)
+        has_business_patterns = any(re.search(pattern, text_lower) for pattern in business_patterns)
+        
+        if has_business_terms or has_business_patterns:
+            # This is business communication - route to appropriate category
+            
+            # Enhanced partial payment detection
+            partial_payment_phrases = [
+                'partial payment', 'weren\'t able to pay the whole amount', 
+                'remaining amount', 'pay the remaining', 'partial check',
+                'weren\'t able to pay', 'will issue a check for the remaining',
+                'partial amount', 'pay portion of'
+            ]
+            if any(phrase in text_lower for phrase in partial_payment_phrases):
+                return RuleResult(
+                    category="Manual Review",
+                    subcategory="Partial/Disputed Payment",
+                    confidence=0.92,
+                    reason="Partial payment detected in thread",
+                    matched_rules=["partial_payment_thread"]
+                )
+            
+            # Enhanced legal/dispute detection
+            legal_dispute_phrases = [
+                'cease and desist', 'do not acknowledge debt', 'fdcpa',
+                'fair debt collection practices act', 'dispute this debt',
+                'formally disputing', 'attorney', 'legal counsel'
+            ]
+            if any(phrase in text_lower for phrase in legal_dispute_phrases):
+                return RuleResult(
+                    category="Manual Review",
+                    subcategory="Partial/Disputed Payment",
+                    confidence=0.95,
+                    reason="Legal/dispute communication detected",
+                    matched_rules=["legal_dispute_thread"]
+                )
+            
+            # Enhanced payment process communication
+            payment_process_phrases = [
+                'in the process of issuing payment', 'invoices have been entered and routed',
+                'routed for approval', 'need to go to several people to approve',
+                'payment being processed', 'check being processed'
+            ]
+            if any(phrase in text_lower for phrase in payment_process_phrases):
+                return RuleResult(
+                    category="Payments Claim",
+                    subcategory="Payment Details Received",
+                    confidence=0.90,
+                    reason="Payment processing details",
+                    matched_rules=["payment_process_thread"]
+                )
+            
+            # Enhanced payment with attachments/proof
+            attachment_phrases = [
+                'see attachments', 'paid see attachments', 'invoice was paid see attachments',
+                'proof attached', 'receipt attached', 'confirmation attached'
+            ]
+            if any(phrase in text_lower for phrase in attachment_phrases):
+                return RuleResult(
+                    category="Payments Claim",
+                    subcategory="Payment Confirmation",
+                    confidence=0.94,
+                    reason="Payment with proof/attachments",
+                    matched_rules=["payment_with_attachments_thread"]
+                )
+            
+            # Enhanced billing/invoice request
+            billing_request_phrases = [
+                'trying to get detailed copy', 'get detailed copy of billing',
+                'detailed copy of this billing', 'need copy of invoice',
+                'send me invoice copy', 'provide invoice copy'
+            ]
+            if any(phrase in text_lower for phrase in billing_request_phrases):
+                return RuleResult(
+                    category="Invoices Request",
+                    subcategory="Request (No Info)",
+                    confidence=0.88,
+                    reason="Billing/invoice copy request",
+                    matched_rules=["billing_request_thread"]
+                )
+            
+            # Enhanced business contact instruction detection
+            business_contact_phrases = [
+                'please contact our', 'contact our department', 'reach out to our team',
+                'contact our office', 'insufficient data provided', 'need more information'
+            ]
+            if any(phrase in text_lower for phrase in business_contact_phrases):
+                return RuleResult(
+                    category="Manual Review",
+                    subcategory="Inquiry/Redirection",
+                    confidence=0.87,
+                    reason="Business contact instruction (not auto-reply)",
+                    matched_rules=["business_contact_instruction_thread"]
+                )
+            
+            # Default business communication to Manual Review
+            return RuleResult(
+                category="Manual Review",
+                subcategory="Complex Queries",
+                confidence=0.85,
+                reason="Business communication in thread",
+                matched_rules=["business_thread_detected"]
+            )
+
+        # PRIORITY 1: Enhanced System/Processing Errors (before OOO)
+        system_error_phrases = [
+            "request couldn't be created", "could not be created", 
+            "system is unable to process", "powered by jira service management",
+            "automated mailbox", "do not reply to this message",
+            "processing error", "system error", "delivery failed"
+        ]
+        if any(phrase in text_lower for phrase in system_error_phrases):
+            return RuleResult(
+                category="No Reply (with/without info)",
+                subcategory="Processing Errors",
+                confidence=0.93,
+                reason="System error/processing failure",
+                matched_rules=["system_error_thread"]
+            )
+
+        # PRIORITY 2: Enhanced OUT OF OFFICE Detection
+        ooo_phrases = [
+            "out of office", "automatic reply", "auto-reply", "auto reply", 
+            "away from desk", "on leave", "i am on vacation", "i will be out"
+        ]
         if any(phrase in text_lower for phrase in ooo_phrases):
+            # Enhanced contact detection with patterns
+            contact_patterns = [
+                r"contact.*me.*at.*\d+", r"call.*my.*cell.*\d+", r"reach.*me.*at.*\d+",
+                r"if.*urgent.*contact", r"emergency.*contact", r"alternate.*contact"
+            ]
             contact_words = ["contact", "reach out", "alternate", "assistance", "forward"]
-            if any(word in text_lower for word in contact_words):
+            
+            has_contact_pattern = any(re.search(pattern, text_lower) for pattern in contact_patterns)
+            has_contact_word = any(word in text_lower for word in contact_words)
+            
+            if has_contact_pattern or has_contact_word:
                 return RuleResult(
                     category="Auto Reply (with/without info)",
                     subcategory="With Alternate Contact",
@@ -432,14 +578,14 @@ class RuleEngine:
                     reason="Generic OOO",
                     matched_rules=["ooo_basic"]
                 )
-        
-        # 2. USE YOUR PATTERN FILES (Primary method)
+
+        # PRIORITY 3: Use Pattern Matcher (Primary method)
         if hasattr(self, 'pattern_matcher'):
             main_cat, subcat, confidence, patterns = self.pattern_matcher.match_text(
                 text_lower, exclude_external_proof=True
             )
             
-            # Trust your patterns if confidence is good
+            # Trust patterns with good confidence
             if main_cat and confidence >= 0.75:
                 return RuleResult(
                     category=main_cat,
@@ -448,8 +594,8 @@ class RuleEngine:
                     reason=f"Thread pattern match: {subcat}",
                     matched_rules=patterns
                 )
-        
-        # 3. PROCESSING ERRORS & NOTIFICATIONS (Must work for No Reply)
+
+        # PRIORITY 4: Processing Errors & Notifications
         if any(phrase in text_lower for phrase in ["pdf not attached", "processing error", "case rejection", "ticket created"]):
             if "ticket created" in text_lower or "case opened" in text_lower:
                 return RuleResult(
@@ -467,8 +613,8 @@ class RuleEngine:
                     reason="Processing error detected",
                     matched_rules=["processing_error"]
                 )
-        
-        # 4. SALES/OFFERS (Must work for No Reply)
+
+        # PRIORITY 5: Sales/Offers Detection
         sales_phrases = ["special offer", "promotional offer", "limited time", "discount", "flash sale"]
         if any(phrase in text_lower for phrase in sales_phrases):
             return RuleResult(
@@ -478,8 +624,8 @@ class RuleEngine:
                 reason="Sales/promotional content",
                 matched_rules=["sales_offer"]
             )
-        
-        # 5. HIGH-VALUE AMOUNT (Can't be in patterns - dynamic)
+
+        # PRIORITY 6: High-Value Amount Detection (Dynamic)
         amount_pattern = re.compile(r'\$[\d,]+\.?\d*')
         amounts = amount_pattern.findall(text_lower)
         if amounts:
@@ -496,8 +642,8 @@ class RuleEngine:
                         )
                 except (ValueError, AttributeError):
                     continue
-        
-        # 6. LEGAL OVERRIDE (High priority)
+
+        # PRIORITY 7: Legal Communication Override
         legal_phrases = ['attorney', 'law firm', 'esq.', 'legal counsel']
         if any(phrase in text_lower for phrase in legal_phrases):
             return RuleResult(
@@ -507,8 +653,8 @@ class RuleEngine:
                 reason="Legal communication",
                 matched_rules=["legal_communication"]
             )
-        
-        # 7. TRY PATTERN MATCHER AGAIN (Lower confidence)
+
+        # PRIORITY 8: Pattern Matcher Second Pass (Lower confidence)
         if hasattr(self, 'pattern_matcher'):
             main_cat, subcat, confidence, patterns = self.pattern_matcher.match_text(
                 text_lower, exclude_external_proof=True
@@ -524,8 +670,8 @@ class RuleEngine:
                     reason=f"Thread pattern match: {subcat}",
                     matched_rules=patterns
                 )
-        
-        # 8. ESSENTIAL FALLBACKS (Payment/Invoice/Dispute)
+
+        # PRIORITY 9: Essential Business Fallbacks
         
         # Payment claims
         if any(word in text_lower for word in ["payment sent", "already paid", "been paid", "check sent"]):
@@ -557,8 +703,9 @@ class RuleEngine:
                 matched_rules=["invoice_request"]
             )
         
-        # Contact redirections
-        if any(phrase in text_lower for phrase in ["no longer with", "please contact", "direct inquiries"]):
+        # Contact redirections vs business contact instructions
+        redirect_phrases = ["no longer with", "direct inquiries", "no longer employed"]
+        if any(phrase in text_lower for phrase in redirect_phrases):
             return RuleResult(
                 category="Auto Reply (with/without info)",
                 subcategory="Redirects/Updates (property changes)",
@@ -566,8 +713,8 @@ class RuleEngine:
                 reason="Contact redirection",
                 matched_rules=["contact_redirect"]
             )
-        
-        # 9. BASIC KEYWORD SAFETY NET
+
+        # PRIORITY 10: Basic Keyword Safety Net
         # Basic payment fallback
         if "payment" in text_lower and any(word in text_lower for word in ["sent", "paid", "made"]):
             return RuleResult(
@@ -587,8 +734,8 @@ class RuleEngine:
                 reason="Basic invoice request",
                 matched_rules=["invoice_basic"]
             )
-        
-        # 10. FINAL FALLBACK
+
+        # PRIORITY 11: Final Fallback
         return RuleResult(
             category="Manual Review",
             subcategory="Complex Queries",

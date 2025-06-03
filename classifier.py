@@ -10,7 +10,7 @@ from typing import Dict, Any, Optional
 from email_classifier.preprocessor import EmailPreprocessor
 from email_classifier.nlp_utils import NLPProcessor, TextAnalysis
 from email_classifier.ml_classifier import MLClassifier
-from email_classifier.rule_engine import RuleEngine
+from email_classifier.rule_engine import RuleEngine, RuleResult
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +21,7 @@ class EmailClassifier:
         "no_reply_no_info", "no_reply_with_info", 
         "auto_reply_no_info", "auto_reply_with_info",
         "invoice_request_no_info", "claims_paid_no_proof", 
-        "claims_paid_with_proof", "manual_review", "Uncategerised"
+        "claims_paid_with_proof", "manual_review", "Uncategorized"
     ]
     
     def __init__(self):
@@ -79,7 +79,6 @@ class EmailClassifier:
             except Exception as e:
                 self.logger.warning(f"Rule engine failed: {e}")
                 # Create fallback rule result
-                from rule_engine import RuleResult  # Adjust import as needed
                 rule_result = RuleResult(
                     category='Manual Review',
                     subcategory='Complex Queries',
@@ -229,7 +228,7 @@ class EmailClassifier:
         
         # Uncategorized
         elif category == "Uncategorized":
-            return "Uncategerised"
+            return "Uncategorized"
         
         # Default fallback
         else:
@@ -263,15 +262,19 @@ class EmailClassifier:
         return False
 
     def _fallback_result(self, reason: str, start_time: float) -> Dict[str, Any]:
-        """Simple fallback result"""
+        """Create a fallback result when classification fails"""
         return {
             'category': 'Manual Review',
-            'subcategory': 'Complex Queries',
-            'confidence': 0.3,
+            'subcategory': 'Error Handling',
+            'confidence': 0.5,
             'method_used': 'fallback',
             'reason': reason,
             'matched_patterns': [],
-            'thread_context': {'has_thread': False, 'thread_count': 0, 'current_reply': 0},
+            'thread_context': {
+                'has_thread': False,
+                'thread_count': 0,
+                'current_reply': 0
+            },
             'processing_time': time.time() - start_time,
             'timestamp': time.time(),
             'final_label': 'manual_review'

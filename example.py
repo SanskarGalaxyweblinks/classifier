@@ -1,5 +1,6 @@
 """
-Example script to demonstrate the email classification system using real data from CSV.
+Clean CSV Email Processor - Simplified and Efficient
+Works with the simplified EmailClassifier
 """
 
 import csv
@@ -9,9 +10,6 @@ import time
 from typing import Dict, List, Any
 from classifier import EmailClassifier
 
-# Increase CSV field size limit
-csv.field_size_limit(2147483647)  # Set to maximum value
-
 # Set up logging
 logging.basicConfig(
     level=logging.INFO,
@@ -19,143 +17,182 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-def process_csv_emails(csv_file_path: str) -> List[Dict[str, Any]]:
-    """
-    Process emails from a CSV file using the classifier and save results.
+class CSVEmailProcessor:
+    """Clean CSV processor that uses the simplified classifier."""
     
-    Args:
-        csv_file_path: Path to the CSV file containing emails
+    def __init__(self, csv_file_path: str):
+        self.csv_file_path = csv_file_path
+        self.classifier = EmailClassifier()
         
-    Returns:
-        List of classification results
-    """
-    classifier = EmailClassifier()
-    results = []
-    total_time = 0
+        # Set CSV field size limit
+        csv.field_size_limit(2147483647)
     
-    try:
-        with open(csv_file_path, 'r', encoding='utf-8') as file:
-            csv_reader = csv.DictReader(file)
-            total_emails = sum(1 for _ in csv_reader)  # Count total emails
-            file.seek(0)  # Reset file pointer
-            next(csv_reader)  # Skip header
-            
-            for row_num, row in enumerate(csv_reader, 1):
-                print(f"\n{'='*80}")
-                print(f"Processing Email #{row_num}/{total_emails}")
-                print(f"{'='*80}")
-                print(f"Subject: {row['subject']}")
+    def process_emails(self) -> List[Dict[str, Any]]:
+        """
+        Process emails from CSV file using the classifier.
+        
+        Returns:
+            List of classification results
+        """
+        results = []
+        start_time = time.time()
+        
+        try:
+            with open(self.csv_file_path, 'r', encoding='utf-8') as file:
+                csv_reader = csv.DictReader(file)
                 
-                try:
-                    start_time = time.time()
-                    
-                    # Get cleaned text from preprocessor
-                    processed_email = classifier.preprocessor.preprocess_email(row['subject'], row['body'])
-                    cleaned_text = processed_email.cleaned_text
-                    
-                    # Classify the email using the updated classifier pipeline
-                    result = classifier.classify_email(row['subject'], row['body'])
-                    
-                    # Calculate processing time
-                    processing_time = time.time() - start_time
-                    total_time += processing_time
-                    
-                    # Add processing time to result
-                    result['processing_time'] = processing_time
-                    
-                    # Print results
-                    print_results(result)
+                # Count total emails for progress tracking
+                total_emails = sum(1 for _ in csv_reader)
+                file.seek(0)
+                next(csv_reader)  # Skip header again
+                
+                logger.info(f"📧 Starting processing of {total_emails} emails")
+                
+                for row_num, row in enumerate(csv_reader, 1):
+                    try:
+                        # Extract email data
+                        subject = row.get('subject', '').strip()
+                        body = row.get('body', '').strip()
+                        
+                        if not subject and not body:
+                            logger.warning(f"⚠️ Email #{row_num}: Empty subject and body, skipping")
+                            continue
+                        
+                        # Print progress every 10 emails
+                        if row_num % 10 == 0 or row_num == 1:
+                            logger.info(f"Processing email {row_num}/{total_emails}")
+                        
+                        # Classify the email (this is all you need!)
+                        classification_result = self.classifier.classify_email(
+                            subject=subject,
+                            body=body,
+                            email_id=row_num
+                        )
+                        
+                        # Get preprocessing info for JSON (same as your original)
+                        processed_email = self.classifier.preprocessor.preprocess_email(subject, body)
+                        
+                        # Store result with EXACT same structure as your original
+                        results.append({
+                            'email_id': row_num,
+                            'subject': subject,
+                            'cleaned_text': processed_email.cleaned_text,
+                            'classification': classification_result,
+                            'final_label': classification_result.get('final_label', 'manual_review'),  # ← ADD THIS
+                            'preprocessing_info': {
+                                'has_thread': processed_email.has_thread,
+                                'thread_count': processed_email.thread_count,
+                                'current_reply_length': len(processed_email.current_reply) if processed_email.current_reply else 0
+                            }
+                        })
+                        
+                        # Print detailed results for first 5 emails
+                        if row_num <= 5:
+                            self._print_detailed_result(row_num, subject, classification_result)
+                        
+                    except Exception as e:
+                        logger.error(f"❌ Error processing email #{row_num}: {str(e)}")
+                        results.append({
+                            'email_id': row_num,
+                            'subject': row.get('subject', ''),
+                            'cleaned_text': '',
+                            'error': str(e),
+                            'preprocessing_info': {
+                                'has_thread': False,
+                                'thread_count': 0,
+                                'current_reply_length': 0
+                            }
+                        })
+                
+                # Calculate performance metrics
+                total_time = time.time() - start_time
+                self._print_summary(results, total_time)
+                
+                # Save results
+                self._save_results(results)
+                
+                return results
+                
+        except FileNotFoundError:
+            logger.error(f"❌ Could not find CSV file: {self.csv_file_path}")
+            return []
+        except Exception as e:
+            logger.error(f"❌ Error reading CSV file: {str(e)}")
+            return []
     
-                    # Save result with cleaned text
-                    results.append({
-                        'email_id': row_num,
-                        'subject': row['subject'],
-                        'cleaned_text': cleaned_text,
-                        'classification': result,
-                        'preprocessing_info': {
-                            'has_thread': processed_email.has_thread,
-                            'thread_count': processed_email.thread_count,
-                            'current_reply_length': len(processed_email.current_reply) if processed_email.current_reply else 0
-                        }
-                    })
-                    
-                except Exception as e:
-                    logger.error(f"Error processing email #{row_num}: {str(e)}")
-                    results.append({
-                        'email_id': row_num,
-                        'subject': row['subject'],
-                        'error': str(e)
-                    })
-                    continue
+    def _print_detailed_result(self, email_id: int, subject: str, result: Dict[str, Any]) -> None:
+        """Print detailed results for debugging."""
+        print(f"\n{'='*60}")
+        print(f"📧 Email #{email_id}")
+        print(f"Subject: {subject[:50]}...")
+        print(f"Category: {result['category']}")
+        print(f"Subcategory: {result['subcategory']}")
+        print(f"Final Label: {result.get('final_label', 'N/A')}")  # ← ADD THIS
+        print(f"Confidence: {result['confidence']:.2f}")
+        print(f"Method: {result['method_used']}")
+        print(f"Time: {result['processing_time']:.3f}s")
         
-        # Calculate and print performance metrics
-        successful_results = [r for r in results if 'error' not in r]
-        avg_time = total_time / len(successful_results) if successful_results else 0
-        logger.info(f"\nPerformance Metrics:")
-        logger.info(f"Total Emails Processed: {len(results)}")
-        logger.info(f"Successful Classifications: {len(successful_results)}")
-        logger.info(f"Total Processing Time: {total_time:.2f}s")
-        logger.info(f"Average Processing Time: {avg_time:.2f}s")
+        # Show thread info if present
+        if result.get('thread_context', {}).get('has_thread'):
+            print(f"Thread: Yes ({result['thread_context']['thread_count']} messages)")
         
-        # Save all results to JSON file
-        save_results(results)
+        print(f"{'='*60}")
+    
+    def _print_summary(self, results: List[Dict[str, Any]], total_time: float) -> None:
+        """Print processing summary."""
+        successful = [r for r in results if 'error' not in r]
+        errors = len(results) - len(successful)
         
-        return results
+        if successful:
+            avg_time = sum(r['classification']['processing_time'] for r in successful) / len(successful)
+            avg_confidence = sum(r['classification']['confidence'] for r in successful) / len(successful)
+        else:
+            avg_time = avg_confidence = 0
         
-    except FileNotFoundError:
-        logger.error(f"Error: Could not find the CSV file at {csv_file_path}")
-        return []
-    except Exception as e:
-        logger.error(f"Error reading CSV file: {str(e)}")
-        return []
-
-def print_results(result: Dict[str, Any]) -> None:
-    """
-    Print classification results in a formatted way.
+        print(f"\n{'='*60}")
+        print(f"📊 PROCESSING SUMMARY")
+        print(f"{'='*60}")
+        print(f"✅ Total Emails: {len(results)}")
+        print(f"✅ Successful: {len(successful)}")
+        print(f"❌ Errors: {errors}")
+        print(f"⏱️  Total Time: {total_time:.2f}s")
+        print(f"⏱️  Avg Time/Email: {avg_time:.3f}s")
+        print(f"🎯 Avg Confidence: {avg_confidence:.2f}")
+        print(f"{'='*60}")
     
-    Args:
-        result: Classification result dictionary
-    """
-    print("\nClassification Results:")
-    print(f"Category: {result['category']}")
-    print(f"Subcategory: {result['subcategory']}")
-    print(f"Confidence: {result['confidence']:.2f}")
-    print(f"Method Used: {result['method_used']}")
-    print(f"Reason: {result['reason']}")
-    print(f"Processing Time: {result.get('processing_time', 0):.2f}s")
-    
-    if result.get('matched_patterns'):
-        print(f"\nMatched Patterns: {', '.join(result['matched_patterns'][:3])}")
-    
-    if result.get('thread_context'):
-        print("\nThread Context:")
-        thread = result['thread_context']
-        print(f"Has Thread: {thread.get('has_thread', False)}")
-        print(f"Thread Count: {thread.get('thread_count', 0)}")
-        print(f"Current Reply Length: {thread.get('current_reply', 0)}")
-
-def save_results(results: List[Dict[str, Any]]) -> None:
-    """
-    Save classification results to JSON file.
-    
-    Args:
-        results: List of classification results
-    """
-    try:
-        with open('classification_results.json', 'w', encoding='utf-8') as out_json:
-            json.dump({
+    def _save_results(self, results: List[Dict[str, Any]]) -> None:
+        """Save results to JSON file with EXACT same structure as original."""
+        try:
+            # Use same filename format as your original
+            output_filename = 'classification_results.json'
+            
+            # Same structure as your original JSON
+            output_data = {
                 'total_emails': len(results),
                 'timestamp': time.strftime('%Y-%m-%d %H:%M:%S'),
                 'results': results
-            }, out_json, ensure_ascii=False, indent=2)
-        logger.info(f"\nSaved classification results for {len(results)} emails to classification_results.json")
-    except Exception as e:
-        logger.error(f"Error saving results: {str(e)}")
+            }
+            
+            with open(output_filename, 'w', encoding='utf-8') as f:
+                json.dump(output_data, f, ensure_ascii=False, indent=2)
+            
+            logger.info(f"💾 Results saved to: {output_filename}")
+            
+        except Exception as e:
+            logger.error(f"❌ Error saving results: {str(e)}")
 
 def main():
-    """Main function to run the classifier test."""
+    """Main function to run the classifier."""
     csv_file_path = "inbox_emails_20250530_160726.csv"
-    process_csv_emails(csv_file_path)
+    
+    # Initialize processor and run
+    processor = CSVEmailProcessor(csv_file_path)
+    results = processor.process_emails()
+    
+    if results:
+        logger.info(f"🎉 Processing complete! Classified {len(results)} emails.")
+    else:
+        logger.error("❌ No emails were processed.")
 
 if __name__ == '__main__':
-    main() 
+    main()

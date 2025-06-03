@@ -1,10 +1,10 @@
 """
 Clean, focused RuleEngine for email classification
 """
-
 import logging
 import time
-from typing import Dict, Optional, Any, List, re
+import re
+from typing import Dict, Optional, Any, List
 from dataclasses import dataclass
 
 # Fixed import paths
@@ -27,6 +27,8 @@ class PerformanceMetrics:
     successful_classifications: int = 0
     errors: int = 0
     avg_processing_time: float = 0.0
+    pattern_cache_hits: int = 0
+    pattern_cache_misses: int = 0
 
 class ClassificationError(Exception):
     """Exception for classification processing errors."""
@@ -46,6 +48,9 @@ class RuleEngine:
         
         # Performance metrics
         self.metrics = PerformanceMetrics()
+        
+        # Pattern cache
+        self._pattern_cache = {}
         
         # Basic thread keywords for fallback only
         self.thread_payment_keywords = ["payment", "paid", "check", "settled"]
@@ -273,7 +278,7 @@ class RuleEngine:
                     if not any(phrase in text_lower for phrase in ["% off", "sale ends", "shop now", "unsubscribe"]):
                         if any(word in text_lower for word in ['paid', 'payment', 'settled']):
                             return RuleResult(
-                                "Manual Review", "Payment Confirmation", 0.94,
+                                "Payments Claim", "Payment Confirmation", 0.94,
                                 "Payment with transaction/proof details", ["payment_with_transaction_proof"]
                             )
 
@@ -385,7 +390,7 @@ class RuleEngine:
                 self._update_metrics(start_time, success=True)
                 return default_result
 
-            except (ClassificationError, PatternValidationError) as e:
+            except (ClassificationError) as e: 
                 self.logger.error(f"Classification error (attempt {attempt + 1}): {e}")
                 if attempt == retry_count - 1:
                     self.metrics.errors += 1
@@ -399,7 +404,6 @@ class RuleEngine:
                     self._update_metrics(start_time, success=False)
                     return self._get_fallback_result(f"Unexpected error: {e}")
                 continue
-
 
     def _handle_thread_email(self, text: str) -> RuleResult:
         """
@@ -618,7 +622,7 @@ class RuleEngine:
                                     "NLP detected dispute topic", ["nlp_dispute_topic"])
                 
                 elif topic in ['payment_confirmation', 'payment_proof', 'transaction_proof']:
-                    return RuleResult("Manual Review", "Payment Confirmation", 0.88, 
+                    return RuleResult("Payments Claim", "Payment Confirmation", 0.88, 
                                     "NLP detected payment proof", ["nlp_payment_proof"])
                 
                 elif topic in ['invoice_receipt', 'invoice_attachment', 'invoice_proof']:
@@ -638,7 +642,7 @@ class RuleEngine:
                                     "NLP detected format error", ["nlp_format_error"])
                 
                 elif topic in ['payment_details_received', 'payment_timeline', 'payment_schedule']:
-                    return RuleResult("Manual Review", "Payment Details Received", 0.88, 
+                    return RuleResult("Payments Claim", "Payment Details Received", 0.88, 
                                     "NLP detected payment details", ["nlp_payment_details"])
                 
                 elif topic in ['inquiry_redirection', 'information_request', 'guidance_needed']:
@@ -659,7 +663,7 @@ class RuleEngine:
                                     "NLP detected processing error", ["nlp_processing_error"])
                 
                 elif topic in ['import_failures', 'import_error', 'upload_failed']:
-                    return RuleResult("No Reply (with/without info)", "Import Failures", 0.88, 
+                    return RuleResult("No Reply (with/without info)", "Processing Errors", 0.88, 
                                     "NLP detected import failure", ["nlp_import_failure"])
                 
                 elif topic in ['created', 'ticket_created', 'case_opened', 'case_created']:
@@ -702,7 +706,7 @@ class RuleEngine:
                                     "NLP detected redirect/update", ["nlp_redirect"])
                 
                 elif topic in ['case_support', 'support_confirmation', 'case_confirmation']:
-                    return RuleResult("Auto Reply (with/without info)", "Case/Support", 0.88, 
+                    return RuleResult("Auto Reply (with/without info)", "No Info/Autoreply", 0.88, 
                                     "NLP detected case/support confirmation", ["nlp_case_support"])
                 
                 elif topic in ['survey', 'feedback_request', 'customer_satisfaction']:
@@ -1082,7 +1086,7 @@ class RuleEngine:
             business_exclusion = ['invoice', 'payment', 'bill', 'insufficient data']
             if not any(word in text_lower for word in business_exclusion):
                 return RuleResult(
-                    "Auto Reply (with/without info)", "Case/Support", 0.89,
+                    "Auto Reply (with/without info)", "No Info/Autoreply", 0.89,
                     "Support case with case number", ["support_case_number"]
                 )
         
@@ -1125,7 +1129,7 @@ class RuleEngine:
             business_exclusion = ['invoice', 'payment', 'insufficient data']
             if not any(word in text_lower for word in business_exclusion):
                 return RuleResult(
-                    "Auto Reply (with/without info)", "Case/Support", 0.70,
+                    "Auto Reply (with/without info)", "No Info/Autoreply", 0.70,
                     "Basic support confirmation", ["basic_support_fallback"]
                 )
         
@@ -1209,7 +1213,6 @@ class RuleEngine:
             return None
         
         # 4. DYNAMIC TICKET/CASE NUMBER DETECTION
-        import re
         ticket_patterns = [
             r'ticket\s*#?\s*\d+', r'case\s*#?\s*\d+', r'case\s+number\s*:?\s*\d+',
             r'support\s+id\s*:?\s*\d+', r'assigned\s*#\s*\d+'
@@ -1317,7 +1320,7 @@ class RuleEngine:
         elif main_category == "Payments Claim":
             return RuleResult("Payments Claim", "Claims Paid (No Info)", 0.6, "Default payment claim", ["payment_claim_default"])
         elif main_category == "Auto Reply (with/without info)":
-            return RuleResult("Auto Reply (with/without info)", "General (Thank You)", 0.6, "Default auto reply", ["auto_reply_default"])
+            return RuleResult("Auto Reply (with/without info)", "No Info/Autoreply", 0.6, "Default auto reply", ["auto_reply_default"])
         else:
             return RuleResult("Uncategorized", "General", 0.5, "Uncategorized email", ["uncategorized_default"])
 
@@ -1365,3 +1368,13 @@ class RuleEngine:
             health_status['issues'].append(f'Validation error: {e}')
         
         return health_status
+
+    def _validate_patterns(self) -> None:
+        """Validate pattern integrity."""
+        try:
+            # Test pattern matcher with sample text
+            test_result = self.pattern_matcher.match_text("test email")
+            self.logger.debug("Pattern validation completed successfully")
+        except Exception as e:
+            self.logger.error(f"Pattern validation failed: {e}")
+            raise

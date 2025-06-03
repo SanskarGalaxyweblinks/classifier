@@ -1,12 +1,11 @@
 """
-Clean NLP utilities for email classification - designed for rule engine integration.
+Clean NLP processor for email classification - aligned with correct hierarchy structure.
 """
 
 import logging
 import re
 from typing import Dict, List
 from dataclasses import dataclass
-from collections import Counter
 
 @dataclass
 class TextAnalysis:
@@ -14,7 +13,7 @@ class TextAnalysis:
     sentiment: float  # -1 to 1
     entities: List[Dict[str, str]]  # List of named entities
     key_phrases: List[str]  # Important phrases
-    topics: List[str]  # Main topics aligned with sublabels
+    topics: List[str]  # Main topics aligned with hierarchy
     urgency_score: float  # 0 to 1
     financial_terms: List[str]  # Financial-related terms
     action_required: bool  # Whether action is needed
@@ -22,71 +21,80 @@ class TextAnalysis:
 
 class NLPProcessor:
     """
-    Quality NLP processor - no external dependencies, uses existing patterns.
+    Quality NLP processor aligned with exact hierarchy structure.
     """
     
     def __init__(self):
         self.logger = logging.getLogger(__name__)
-        self._initialize_sublabel_patterns()
-        self.logger.info("✅ NLP Processor initialized for rule engine")
+        self._initialize_hierarchy_patterns()
+        self.logger.info("✅ NLP Processor initialized with correct hierarchy")
     
-    def _initialize_sublabel_patterns(self):
-        """Initialize patterns aligned with your sublabel structure."""
+    def _initialize_hierarchy_patterns(self):
+        """Initialize patterns aligned with EXACT hierarchy structure."""
         
-        # Sublabel-specific keywords for topic identification
-        self.sublabel_indicators = {
+        # Hierarchy-aligned topic indicators - CORRECTED
+        self.hierarchy_indicators = {
             # Manual Review sublabels
-            'partial_disputed_payment': ['partial', 'dispute', 'contested', 'disagreement'],
-            'payment_confirmation': ['payment confirmation', 'proof of payment', 'payment receipt', 'payment evidence'],
-            'invoice_receipt': ['invoice receipt', 'proof of invoice', 'invoice copy', 'invoice attached'],
-            'closure_notification': ['business closed', 'company closed', 'out of business', 'ceased operations'],
-            'closure_payment_due': ['closed', 'payment due', 'outstanding', 'final payment'],
-            'external_submission': ['invoice issue', 'invoice problem', 'invoice concern'],
-            'invoice_errors': ['missing field', 'format mismatch', 'incomplete', 'required field'],
-            'payment_details_received': ['payment details', 'remittance info', 'payment breakdown'],
+            'partial_disputed_payment': ['partial', 'dispute', 'contested', 'disagreement', 'refuse payment'],
+            'invoice_receipt': ['invoice receipt', 'proof of invoice', 'invoice copy', 'invoice documentation'],
+            'closure_notification': ['closure notification', 'business closed', 'company closed', 'out of business'],
+            'closure_payment_due': ['closure', 'payment due', 'outstanding payment', 'final payment'],
+            'external_submission': ['invoice issue', 'invoice error', 'invoice problem', 'submission failed'],
+            'invoice_errors_format': ['missing field', 'format mismatch', 'incomplete invoice', 'format error'],
             'inquiry_redirection': ['redirect', 'forward', 'contact instead', 'reach out to'],
-            'complex_queries': ['multiple', 'various', 'several', 'complex'],
+            'complex_queries': ['multiple issues', 'various topics', 'complex query'],
             
-            # No Reply sublabels  
-            'sales_offers': ['offer', 'promotion', 'discount', 'sale'],
+            # No Reply - Notifications sublabels
+            'sales_offers': ['sales offer', 'promotion', 'discount', 'special offer'],
+            'system_alerts': ['system alert', 'alert notification', 'system notification'],
             'processing_errors': ['processing error', 'failed to process', 'processing failed'],
-            'import_failures': ['import failed', 'import error', 'failed import'],
-            'business_closure_info': ['closure information', 'informing closure'],
-            'ticket_created': ['ticket created', 'case opened', 'new ticket', 'case number'],
-            'ticket_resolved': ['ticket resolved', 'case closed', 'resolved', 'completed'],
-            'ticket_open': ['ticket open', 'case pending', 'still open'],
+            'business_closure_info': ['closure information', 'business closure info', 'closure notice'],
+            'general_thank_you': ['thank you', 'thanks', 'received your message', 'acknowledgment'],
             
-            # Auto Reply sublabels
-            'out_of_office': ['out of office', 'away from desk', 'automatic reply'],
-            'with_alternate_contact': ['contact', 'reach out', 'alternative'],
-            'return_date_specified': ['return', 'back on', 'until'],
-            'case_support_confirmation': ['case confirmed', 'support request', 'ticket confirmed'],
-            'general_thank_you': ['thank you', 'thanks', 'received your message'],
-            'survey': ['survey', 'feedback', 'rate'],
-            'redirects_updates': ['property manager', 'contact changed', 'forwarding']
+            # No Reply - Tickets/Cases sublabels  
+            'tickets_created': ['ticket created', 'case created', 'new ticket', 'case opened'],
+            'tickets_resolved': ['ticket resolved', 'case resolved', 'ticket closed', 'case closed'],
+            'tickets_open': ['ticket open', 'case open', 'still pending', 'in progress'],
+            
+            # Invoices Request sublabel
+            'invoice_request_no_info': ['invoice request', 'need invoice', 'send invoice', 'invoice copy'],
+                        
+            # Payments Claim sublabels - CORRECTED
+            'claims_paid_no_info': ['payment made', 'already paid', 'check sent', 'payment completed'],
+            'payment_confirmation': ['payment confirmation', 'proof of payment', 'payment receipt', 'payment evidence'],
+            'payment_details_received': ['payment details', 'remittance info', 'payment breakdown'],
+
+            # Auto Reply - Out of Office sublabels
+            'ooo_alternate_contact': ['alternate contact', 'contact instead', 'reach out to'],
+            'ooo_no_info': ['out of office', 'away from desk', 'automatic reply'],
+            'ooo_return_date': ['return date', 'back on', 'return', 'until'],
+            
+            # Auto Reply - Miscellaneous sublabels
+            'survey': ['survey', 'feedback', 'questionnaire', 'rate'],
+            'redirects_updates': ['property manager', 'contact changed', 'forwarding', 'property changes']
         }
         
         # Financial terms
         self.financial_keywords = {
-            'payment': ['payment', 'pay', 'paid', 'remittance', 'check', 'wire'],
+            'payment': ['payment', 'pay', 'paid', 'remittance', 'check', 'wire', 'transfer'],
             'invoice': ['invoice', 'bill', 'statement', 'receipt'],
             'amount': ['amount', 'total', 'sum', 'balance', 'due'],
-            'dispute': ['dispute', 'disagreement', 'contested'],
-            'closure': ['closed', 'closure', 'terminated', 'dissolved']
+            'dispute': ['dispute', 'disagreement', 'contested', 'challenge'],
+            'closure': ['closed', 'closure', 'terminated', 'ceased', 'dissolved']
         }
         
-        # Sentiment words
-        self.positive_words = ['thank', 'good', 'great', 'appreciate', 'excellent', 'pleased']
-        self.negative_words = ['error', 'issue', 'problem', 'wrong', 'failed', 'dispute']
+        # Sentiment indicators
+        self.positive_words = ['thank', 'good', 'great', 'appreciate', 'excellent', 'pleased', 'satisfied']
+        self.negative_words = ['error', 'issue', 'problem', 'wrong', 'failed', 'dispute', 'concern']
         
         # Urgency indicators
-        self.urgency_keywords = ['urgent', 'immediate', 'asap', 'critical', 'deadline', 'today', 'now']
+        self.urgency_keywords = ['urgent', 'immediate', 'asap', 'critical', 'deadline', 'today', 'now', 'quickly']
         
         # Action indicators
-        self.action_keywords = ['please', 'kindly', 'request', 'need', 'send', 'provide']
+        self.action_keywords = ['please', 'kindly', 'request', 'need', 'send', 'provide', 'confirm', 'verify']
         
         # Complexity indicators
-        self.complexity_keywords = ['multiple', 'various', 'complex', 'detailed', 'if', 'unless']
+        self.complexity_keywords = ['multiple', 'various', 'complex', 'detailed', 'several', 'numerous']
     
     def analyze_text(self, text: str) -> TextAnalysis:
         """
@@ -98,11 +106,11 @@ class NLPProcessor:
             
             text_lower = text.lower()
             
-            # Perform all analysis
+            # Perform analysis
             sentiment = self._calculate_sentiment(text_lower)
             entities = self._extract_entities(text)
             key_phrases = self._extract_key_phrases(text_lower)
-            topics = self._identify_sublabel_topics(text_lower)
+            topics = self._identify_hierarchy_topics(text_lower)
             urgency_score = self._calculate_urgency(text_lower)
             financial_terms = self._extract_financial_terms(text_lower)
             action_required = self._check_action_required(text_lower)
@@ -120,31 +128,27 @@ class NLPProcessor:
             )
             
         except Exception as e:
-            self.logger.error(f"❌ NLP analysis error: {e}")
+            self.logger.error(f"NLP analysis error: {e}")
             return self._get_empty_analysis()
     
-    def _identify_sublabel_topics(self, text: str) -> List[str]:
-        """Identify topics aligned with your sublabel structure."""
+    def _identify_hierarchy_topics(self, text: str) -> List[str]:
+        """Identify topics aligned with hierarchy structure."""
         topics = []
         
-        # Check sublabel indicators
-        for sublabel, keywords in self.sublabel_indicators.items():
-            for keyword in keywords:
-                if keyword in text:
-                    topics.append(sublabel)
-                    break  # Only add once per sublabel
+        # Check hierarchy indicators
+        for topic, keywords in self.hierarchy_indicators.items():
+            if any(keyword in text for keyword in keywords):
+                topics.append(topic)
         
         # Check financial categories
         for category, keywords in self.financial_keywords.items():
-            for keyword in keywords:
-                if keyword in text:
-                    topics.append(category)
-                    break
+            if any(keyword in text for keyword in keywords):
+                topics.append(category)
         
         return list(set(topics))  # Remove duplicates
     
     def _calculate_sentiment(self, text: str) -> float:
-        """Simple sentiment calculation."""
+        """Calculate sentiment score."""
         positive_count = sum(1 for word in self.positive_words if word in text)
         negative_count = sum(1 for word in self.negative_words if word in text)
         
@@ -155,23 +159,58 @@ class NLPProcessor:
         return (positive_count - negative_count) / total
     
     def _extract_entities(self, text: str) -> List[Dict[str, str]]:
-        """Extract basic entities without external dependencies."""
+        """Extract entities relevant to email classification."""
         entities = []
         
         # Email addresses
         emails = re.findall(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b', text)
         for email in emails:
-            entities.append({'text': email, 'label': 'EMAIL', 'start': text.find(email), 'end': text.find(email) + len(email)})
+            entities.append({
+                'text': email, 
+                'label': 'EMAIL', 
+                'start': text.find(email), 
+                'end': text.find(email) + len(email)
+            })
         
         # Account numbers
-        accounts = re.findall(r'Account#?\s*([A-Z0-9-]+)', text, re.IGNORECASE)
+        accounts = re.findall(r'(?:account|acct)#?\s*([A-Z0-9-]+)', text, re.IGNORECASE)
         for account in accounts:
-            entities.append({'text': account, 'label': 'ACCOUNT', 'start': text.find(account), 'end': text.find(account) + len(account)})
+            entities.append({
+                'text': account, 
+                'label': 'ACCOUNT', 
+                'start': text.find(account), 
+                'end': text.find(account) + len(account)
+            })
         
         # Case/Ticket numbers
-        cases = re.findall(r'(case|ticket).*?#?([A-Z0-9]+)', text, re.IGNORECASE)
-        for case_type, case_num in cases:
-            entities.append({'text': case_num, 'label': 'CASE_NUMBER', 'start': text.find(case_num), 'end': text.find(case_num) + len(case_num)})
+        cases = re.findall(r'(?:case|ticket)#?\s*([A-Z0-9-]+)', text, re.IGNORECASE)
+        for case in cases:
+            entities.append({
+                'text': case, 
+                'label': 'CASE_NUMBER', 
+                'start': text.find(case), 
+                'end': text.find(case) + len(case)
+            })
+        
+        # Invoice numbers
+        invoices = re.findall(r'(?:invoice|inv)#?\s*([A-Z0-9-]+)', text, re.IGNORECASE)
+        for invoice in invoices:
+            entities.append({
+                'text': invoice, 
+                'label': 'INVOICE_NUMBER', 
+                'start': text.find(invoice), 
+                'end': text.find(invoice) + len(invoice)
+            })
+        
+        # Transaction numbers
+        transactions = re.findall(r'(?:transaction|trans)#?\s*([A-Z0-9-]+)', text, re.IGNORECASE)
+        for transaction in transactions:
+            entities.append({
+                'text': transaction,
+                'label': 'TRANSACTION_NUMBER',
+                'start': text.find(transaction),
+                'end': text.find(transaction) + len(transaction)
+            })
         
         return entities
     
@@ -179,8 +218,8 @@ class NLPProcessor:
         """Extract key phrases relevant to classification."""
         key_phrases = []
         
-        # Add sublabel-specific phrases
-        for sublabel, keywords in self.sublabel_indicators.items():
+        # Add hierarchy-specific phrases
+        for topic, keywords in self.hierarchy_indicators.items():
             for keyword in keywords:
                 if keyword in text:
                     key_phrases.append(keyword)
@@ -191,20 +230,15 @@ class NLPProcessor:
                 if keyword in text:
                     key_phrases.append(keyword)
         
-        return list(set(key_phrases))
+        return list(set(key_phrases))[:10]  # Limit to top 10
     
     def _calculate_urgency(self, text: str) -> float:
-        """Calculate urgency score."""
-        urgency_score = 0.0
-        
-        for keyword in self.urgency_keywords:
-            if keyword in text:
-                urgency_score += 0.2
-        
-        return min(urgency_score, 1.0)
+        """Calculate urgency score based on keywords."""
+        urgency_count = sum(1 for keyword in self.urgency_keywords if keyword in text)
+        return min(urgency_count * 0.25, 1.0)
     
     def _extract_financial_terms(self, text: str) -> List[str]:
-        """Extract financial terms as simple list."""
+        """Extract financial terms."""
         financial_terms = []
         
         for category, keywords in self.financial_keywords.items():
@@ -215,7 +249,7 @@ class NLPProcessor:
         return list(set(financial_terms))
     
     def _check_action_required(self, text: str) -> bool:
-        """Check if action is required."""
+        """Check if action is required based on keywords."""
         return any(keyword in text for keyword in self.action_keywords)
     
     def _calculate_complexity(self, text_lower: str, original_text: str) -> float:
@@ -224,24 +258,27 @@ class NLPProcessor:
         
         # Check complexity keywords
         complexity_count = sum(1 for keyword in self.complexity_keywords if keyword in text_lower)
-        complexity_score += min(complexity_count * 0.1, 0.3)
+        complexity_score += min(complexity_count * 0.15, 0.3)
         
-        # Sentence length
-        sentences = original_text.split('.')
-        if sentences:
-            avg_length = sum(len(s.split()) for s in sentences) / len(sentences)
-            if avg_length > 15:
-                complexity_score += 0.2
+        # Check sentence count and length
+        sentences = [s.strip() for s in original_text.split('.') if s.strip()]
+        if len(sentences) > 5:
+            complexity_score += 0.2
         
-        # Multiple financial terms
+        # Check word count
+        word_count = len(original_text.split())
+        if word_count > 200:
+            complexity_score += 0.2
+        
+        # Check multiple financial terms
         financial_count = len(self._extract_financial_terms(text_lower))
-        if financial_count > 2:
+        if financial_count > 3:
             complexity_score += 0.2
         
-        # Multiple topics
-        topic_count = len(self._identify_sublabel_topics(text_lower))
+        # Check multiple topics
+        topic_count = len(self._identify_hierarchy_topics(text_lower))
         if topic_count > 2:
-            complexity_score += 0.2
+            complexity_score += 0.1
         
         return min(complexity_score, 1.0)
     
@@ -257,3 +294,29 @@ class NLPProcessor:
             action_required=False,
             complexity_score=0.0
         )
+
+    def get_hierarchy_topics_info(self) -> Dict[str, List[str]]:
+        """Get information about available hierarchy topics."""
+        return {
+            'manual_review_topics': [
+                'partial_disputed_payment', 'invoice_receipt', 'closure_notification',
+                'closure_payment_due', 'external_submission', 'invoice_errors_format',
+                'inquiry_redirection', 'complex_queries'
+            ],
+            'no_reply_notifications_topics': [
+                'sales_offers', 'system_alerts', 'processing_errors', 
+                'business_closure_info', 'general_thank_you'
+            ],
+            'no_reply_tickets_topics': [
+                'tickets_created', 'tickets_resolved', 'tickets_open'
+            ],
+            'invoices_request_topics': ['request_no_info'],
+            'payments_claim_topics': [
+                'claims_paid_no_info', 'payment_confirmation', 'payment_details_received'
+            ],
+            'auto_reply_ooo_topics': [
+                'with_alternate_contact', 'no_info_autoreply', 'return_date_specified'
+            ],
+            'auto_reply_misc_topics': ['survey', 'redirects_updates']
+        }
+

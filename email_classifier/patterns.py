@@ -15,23 +15,23 @@ class PatternMatcher:
         
         # Your existing patterns - organized by new hierarchy structure
         self.patterns = {
-            "manual_review": {
+            "Manual Review": {
                 # Disputes & Payments
-                "partial_disputed_payment": [
-                    # From your original patterns
+                "Partial/Disputed Payment": [
+                    # Core dispute patterns
                     r"amount.*is.*in.*dispute", r"this.*amount.*is.*in.*dispute", r"balance.*is.*not.*ours",
                     r"balance.*is.*not.*accurate", r"not.*our.*responsibility", r"do.*not.*owe", 
                     r"contested", r"disagreement", r"refuse", r"formally.*disputing", 
                     r"not.*accurate", r"that.*not.*my.*bill", r"due.*to.*a.*sale.*of.*property",
                     r"not.*ours.*due.*to",
                     
-                    # Additional flexible patterns
+                    # Payment dispute patterns
                     r"partial.*payment", r"dispute.*payment", r"contested.*payment", 
                     r"disagreement.*payment", r"challenge.*payment", r"waive.*charges", 
                     r"cancel.*account", r"charges.*and.*cancel", r"material.*breach",
                     r"breach.*of.*contract", r"owes.*me", r"owes.*us",
                     
-                    # Additional patterns
+                    # Billing dispute patterns
                     r"debt.*is.*disputed", r"this.*debt.*is.*disputed",
                     r"disputed.*and.*not.*properly.*billed", r"billing.*error",
                     r"not.*properly.*billed", r"billed.*to.*wrong",
@@ -43,39 +43,39 @@ class PatternMatcher:
                 ],
                 
                 # Invoice Updates  
-                "invoice_receipt": [
+                "Invoice Receipt": [
                     r"invoice.*attached", r"invoice.*copy.*attached", r"see.*attached.*invoice",
                     r"invoice.*is.*attached", r"here.*is.*invoice", r"proof.*of.*invoice",
                     r"invoice.*receipt", r"invoice.*documentation", r"copy.*of.*invoice.*attached"
                 ],
                 
                 # Business Closure
-                "closure_notification": [
+                "Closure Notification": [
                     r"business.*closed", r"company.*closed", r"out.*of.*business", r"ceased.*operations",
                     r"filed.*bankruptcy", r"bankruptcy.*protection", r"chapter.*7", r"chapter.*11"
                 ],
                 
-                "closure_payment_due": [
+                "Closure + Payment Due": [
                     r"closed.*payment.*due", r"business.*closed.*outstanding", r"closure.*payment.*required",
                     r"bankruptcy.*payment", r"filed.*bankruptcy.*payment", r"closure.*with.*payment"
                 ],
                 
                 # Invoices
-                "external_submission": [
+                "External Submission": [
                     r"invoice.*issue", r"invoice.*problem", r"invoice.*error", r"import.*failed",
                     r"failed.*import", r"invoice.*submission.*failed", r"documents.*not.*processed",
                     r"submission.*failed", r"unable.*to.*import", r"import.*unsuccessful",
                     r"could.*not.*import", r"failed.*to.*import", r"error.*importing"
                 ],
                 
-                "invoice_errors_format": [
+                "Invoice Errors (format mismatch)": [
                     r"missing.*field", r"format.*mismatch", r"incomplete.*invoice", r"required.*field",
                     r"invoice.*format.*issue", r"format.*error", r"field.*missing"
                 ],
                 
                 # Other Manual Review
-                "inquiry_redirection": [
-                    # Existing patterns
+                "Inquiry/Redirection": [
+                    # Information requests
                     r"insufficient.*data.*provided.*to.*research", r"there.*is.*insufficient.*data",
                     r"please.*ask", r"they.*are.*the.*who.*you.*must.*be.*reaching.*out",
                     r"i.*need.*guidance", r"please.*advise.*what.*is.*needed",
@@ -88,54 +88,54 @@ class PatternMatcher:
                     r"where.*to.*send.*payment",
                     r"can.*meet.*this.*requirement",
                     
-                    # Additional patterns
+                    # Verification requests
                     r"looks.*like.*a.*scam", r"think.*scam", r"verify.*legitimate",
                     r"are.*you.*legitimate", r"gotten.*scammed", r"verify.*authenticity",
                     r"please.*provide.*me.*with.*verification", r"verify.*with.*the.*sender",
                     r"if.*you.*are.*legitimate", r"consider.*this.*a.*scam", r"otherwise.*consider.*scam"
                 ],
                 
-                "complex_queries": [
+                "Complex Queries": [
                     r"multiple.*issues", r"several.*questions", r"complex.*situation", r"detailed.*inquiry",
                     r"various.*concerns", r"legal.*communication", r"attorney.*communication"
                 ]
             },
             
-            "no_reply": {
+            "No Reply (with/without info)": {
                 # Notifications
-                "sales_offers": [
+                "Sales/Offers": [
                     r"special.*offer", r"limited.*time.*offer", r"promotional.*offer", 
                     r"sales.*promotion", r"discount.*offer", r"exclusive.*deal", r"flash.*sale"
                 ],
                 
-                "system_alerts": [
+                "System Alerts": [
                     r"system.*notification", r"automated.*notification", r"system.*alert",
                     r"maintenance.*notification", r"service.*update", r"backup.*completed",
                     r"security.*alert", r"delivery.*notification", r"legal.*notice"
                 ],
                 
-                "processing_errors": [
-                    # From your original patterns
+                "Processing Errors": [
+                    # Processing failures
                     r"pdf.*file.*is.*not.*attached", r"error.*reason", r"processing.*error", 
                     r"cannot.*be.*processed", r"electronic.*invoice.*rejected", r"failed.*to.*process", 
                     r"case.*rejection",
                     
-                    # Additional patterns
+                    # Delivery failures
                     r"processing.*failed", r"unable.*to.*process", r"rejected.*for.*no.*attachment", 
                     r"mail.*delivery.*failed", r"email.*bounced", r"delivery.*failure", 
                     r"message.*undelivered", r"bounce.*back", r"email.*cannot.*be.*delivered"
                 ],
                 
-                "business_closure_info": [
+                "Business Closure (Info only)": [
                     r"business.*closure.*information", r"closure.*notification.*only"
                 ],
                 
-                "general_thank_you": [
-                    # Your original patterns
+                "General (Thank You)": [
+                    # Thank you messages
                     r"unsubscribe", r"email.*preferences", r"thank.*you.*for.*your.*email",
                     r"thanks.*for.*your.*email", r"thank.*you.*for.*contacting",
                     
-                    # Additional patterns
+                    # Status updates
                     r"still.*reviewing", r"will.*get.*back.*to.*you", r"reviewing.*this.*invoice",
                     r"currently.*reviewing", r"under.*review", r"in.*progress", r"processing.*your.*request",
                     r"we.*are.*reviewing", r"our.*return.*#.*is", r"correct.*number.*is",
@@ -143,26 +143,26 @@ class PatternMatcher:
                 ],
                 
                 # Tickets/Cases
-                "tickets_created": [
+                "Created": [
                     r"ticket.*created", r"case.*opened", r"new.*ticket", r"support.*request.*created",
                     r"case.*number.*is", r"assigned.*#", r"support.*ticket.*opened", 
                     r"case.*has.*been.*created", r"ticket.*has.*been.*created"
                 ],
                 
-                "tickets_resolved": [
+                "Resolved": [
                     r"ticket.*resolved", r"case.*closed", r"case.*resolved", r"case.*has.*been.*resolved",
                     r"ticket.*has.*been.*resolved", r"case.*is.*now.*closed", r"request.*completed",
                     r"moved.*to.*solved", r"marked.*as.*resolved"
                 ],
                 
-                "tickets_open": [
+                "Open": [
                     r"ticket.*open", r"case.*open", r"still.*pending", r"in.*progress", r"case.*pending"
                 ]
             },
             
-            "invoices_request": {
-                "request_no_info": [
-                    # Your specific patterns
+            "Invoices Request": {
+                "Request (No Info)": [
+                    # Specific invoice requests
                     r"can.*you.*please.*provide.*me.*with.*outstanding.*invoices",
                     r"provide.*me.*with.*outstanding.*invoices", r"can.*you.*please.*send.*me.*copies.*of.*any.*invoices",
                     r"send.*me.*copies.*of.*any.*invoices", r"can.*you.*send.*me.*the.*invoice",
@@ -170,30 +170,30 @@ class PatternMatcher:
                     r"provide.*invoice.*copy", r"send.*us.*invoice.*copy", r"copies.*of.*any.*invoices.*or.*po.*s",
                     r"outstanding.*invoices.*owed",
                     
-                    # Additional flexible patterns
+                    # General invoice requests
                     r"send.*invoice", r"need.*invoice", r"please.*send.*invoice", r"provide.*invoice",
                     r"invoice.*request", r"can.*you.*send.*invoice", r"send.*us.*invoice",
                     r"please.*provide.*invoice", r"invoice.*copy", r"copy.*of.*invoice"
                 ]
             },
             
-            "payments_claim": {
-                "claims_paid_no_info": [
-                    # Your specific patterns
+            "Payments Claim": {
+                "Claims Paid (No Info)": [
+                    # Basic payment claims
                     r"its.*been.*paid", r"has.*been.*settled", r"this.*has.*been.*settled", 
                     r"already.*paid", r"been.*paid.*to.*them", r"payment.*was.*made", 
                     r"we.*paid", r"bill.*was.*paid", r"paid.*directly.*to", r"settled.*with",
                     r"been.*paid.*to", r"we.*sent.*check.*on", r"sent.*check.*on", 
                     r"check.*on.*april", r"check.*on.*may", r"check.*on.*march",
                     
-                    # Flexible patterns
+                    # Payment sent claims
                     r"payment.*was.*sent", r"payment.*sent.*today", r"was.*paid.*by.*credit.*card",
                     r"we.*sent.*payment", r"we.*sent.*payment.*to", r"this.*payment.*has.*already.*been.*sent",
                     r"this.*was.*paid", r"it.*was.*paid", r"invoices.*are.*being.*processed.*for.*payment",
                     r"received.*invoices.*are.*being.*processed", r"i.*have.*paid.*my.*account",
                     r"paid.*my.*account.*via.*cc", r"paid.*via.*cc", r"paid.*last.*friday",
                     
-                    # General patterns
+                    # General payment patterns
                     r"payment.*sent", r"sent.*payment", r"payment.*made", r"was.*paid",
                     r"been.*paid", r"payment.*completed", r"payment.*processed", r"paid.*by",
                     r"paid.*via", r"paid.*through", r"paid.*on", r"paid.*to", r"sent.*check",
@@ -206,13 +206,15 @@ class PatternMatcher:
                     r"payment.*has.*already.*been.*sent", r"get.*outlook.*for.*ios"
                 ],
                 
-                "payment_confirmation": [
-                    # Your original payment confirmation patterns (MOVED from manual_review)
+                "Payment Confirmation": [
+                    # Proof of payment
                     r"proof.*of.*payment", r"payment.*confirmation", r"i.*have.*receipt",
                     r"check.*number", r"eft#", r"confirmation.*#", r"payment.*has.*been.*released",
                     r"was.*reconciled", r"here.*is.*proof", r"attached.*proof", r"payment.*evidence",
                     r"payment.*copy", r"wire.*document", r"receipt.*for", r"transaction.*id",
                     r"payment.*reference", r"voucher.*id", r"cleared.*bank",
+                    
+                    # Transaction details
                     r"paid.*via.*transaction.*number",
                     r"paid.*via.*batch.*number", 
                     r"transaction.*and.*batch.*numbers",
@@ -232,8 +234,8 @@ class PatternMatcher:
                     r"batch.*numbers.*are.*included"
                 ],
                 
-                "payment_details_received": [
-                    # Your original patterns (MOVED from manual_review)
+                "Payment Details Received": [
+                    # Payment processing info
                     r"payment.*will.*be.*sent", r"payment.*is.*being.*processed", r"check.*will.*be.*mailed",
                     r"payment.*scheduled", r"checks.*will.*be.*mailed.*by", r"payment.*timeline",
                     r"payment.*being.*processed", r"invoice.*being.*processed", r"payment.*details",
@@ -246,21 +248,21 @@ class PatternMatcher:
                 ]
             },
             
-            "auto_reply": {
+            "Auto Reply (with/without info)": {
                 # Out of Office
-                "ooo_with_alternate_contact": [
+                "With Alternate Contact": [
                     r"out.*of.*office.*contact", r"out.*of.*office.*reach.*out", r"contact.*me.*at",
                     r"please.*contact.*\w+", r"call.*my.*cell", r"call.*my.*mobile", 
                     r"if.*you.*need.*immediate.*assistance", r"for.*all.*of.*your.*ap.*needs",
                     r"if.*urgent", r"urgent.*please.*contact", r"alternate.*contact"
                 ],
                 
-                "ooo_return_date": [
+                "Return Date Specified": [
                     r"out.*of.*office.*until", r"return.*on", r"back.*on", r"available.*after",
                     r"returning.*\w+", r"will.*be.*back", r"out.*until.*\w+", r"when.*i.*return"
                 ],
                 
-                "ooo_no_info": [
+                "No Info/Autoreply": [
                     r"out.*of.*office", r"automatic.*reply", r"auto-reply", r"auto.*reply",
                     r"i.*am.*currently.*out", r"i.*will.*be.*out", r"away.*from.*desk",
                     r"limited.*access.*to.*email", r"will.*return", r"on.*vacation", r"on.*leave",
@@ -269,25 +271,25 @@ class PatternMatcher:
                 ],
                 
                 # Miscellaneous
-                "survey": [
-                    # Your original patterns
+                "Survey": [
+                    # Survey requests
                     r"survey", r"feedback.*request", r"rate.*our.*service", r"customer.*satisfaction",
                     r"please.*rate", r"take.*short.*survey",
                     
-                    # Additional patterns
+                    # Feedback requests
                     r"feedback.*is.*important", r"take.*our.*survey", r"complete.*the.*online.*survey",
                     r"please.*visit.*the.*survey", r"survey.*web.*site.*link", r"feedback.*on.*the.*support",
                     r"would.*appreciate.*your.*feedback", r"click.*here.*to.*complete.*survey"
                 ],
                 
-                "redirects_updates": [
-                    # Your original patterns
+                "Redirects/Updates (property changes)": [
+                    # Contact changes
                     r"is.*no.*longer.*with", r"please.*direct.*all.*future.*inquiries.*to", r"not.*accounts.*payable",
-                    r"please.*contact", r"direct.*inquiries.*to", r"no.*longer.*employed",
+                    r"direct.*inquiries.*to", r"no.*longer.*employed",
                     r"please.*contact.*hd.*supply", r"contact.*the.*vendor.*directly", r"starting.*may.*1",
                     r"no.*longer.*be.*accepted", r"now.*using", r"please.*submit.*all.*future",
                     
-                    # Additional patterns
+                    # Property/department changes
                     r"contact.*changed", r"new.*contact", r"property.*manager",
                     r"department.*changed", r"quarantine.*report", r"contact.*redirection", r"forwarding.*to"
                 ]

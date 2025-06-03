@@ -30,71 +30,360 @@ class NLPProcessor:
         self.logger.info("✅ NLP Processor initialized with correct hierarchy")
     
     def _initialize_hierarchy_patterns(self):
-        """Initialize patterns aligned with EXACT hierarchy structure."""
+        """Initialize patterns aligned with EXACT hierarchy structure - UPDATED with missed patterns."""
         
-        # Hierarchy-aligned topic indicators - CORRECTED
+        # UPDATED: Use EXACT sublabel names from hierarchy + missing patterns from analysis
         self.hierarchy_indicators = {
-            # Manual Review sublabels
-            'partial_disputed_payment': ['partial', 'dispute', 'contested', 'disagreement', 'refuse payment'],
-            'invoice_receipt': ['invoice receipt', 'proof of invoice', 'invoice copy', 'invoice documentation'],
-            'closure_notification': ['closure notification', 'business closed', 'company closed', 'out of business'],
-            'closure_payment_due': ['closure', 'payment due', 'outstanding payment', 'final payment'],
-            'external_submission': ['invoice issue', 'invoice error', 'invoice problem', 'submission failed'],
-            'invoice_errors_format': ['missing field', 'format mismatch', 'incomplete invoice', 'format error'],
-            'inquiry_redirection': ['redirect', 'forward', 'contact instead', 'reach out to'],
-            'complex_queries': ['multiple issues', 'various topics', 'complex query'],
+            # Manual Review sublabels - EXACT NAMES + ENHANCED PATTERNS
+            'Partial/Disputed Payment': [
+                # Original patterns
+                'partial', 'dispute', 'contested', 'disagreement', 'refuse payment', 'billing error',
+                # Missing patterns from legal dispute analysis
+                'owe nothing', 'owe them nothing', 'consider this a scam', 'looks like a scam',
+                'is this legitimate', 'verify this debt', 'do not acknowledge', 'formally disputing',
+                'dispute this debt', 'billing is incorrect', 'not our responsibility', 'cease and desist',
+                'fdcpa', 'not properly billed', 'wrong entity', 'debt is disputed',
+                # Enhanced legal patterns
+                'cease and desist letter', 'legal notice', 'fdcpa violation', 'debt validation request',
+                'collection agency violation', 'fair debt collection', 'attorney correspondence',
+                'legal representation', 'debt collector harassment', 'validation of debt',
+                'cease all communication', 'legal action threatened', 'legal counsel representation'
+            ],
+            'Invoice Receipt': [
+                'invoice attached', 'proof of invoice', 'invoice copy attached', 'invoice documentation attached',
+                # Enhanced proof patterns
+                'invoice receipt attached', 'copy of invoice attached for your records',
+                'attached invoice as proof', 'here is the invoice copy',
+                # Payment error documentation patterns
+                'payment made in error documentation', 'error payment proof', 'documentation for payment error',
+                'proof of payment error', 'attached payment documentation', 'payment error receipt'
+            ],
+            'Closure Notification': [
+                'business closed', 'company closed', 'out of business', 'ceased operations', 'bankruptcy',
+                # Enhanced closure patterns
+                'filed bankruptcy', 'bankruptcy protection', 'chapter 7', 'chapter 11'
+            ],
+            'Closure + Payment Due': [
+                'closure payment due', 'bankruptcy payment', 'closed outstanding payment',
+                'business closed outstanding', 'closure with outstanding payment'
+            ],
+            'External Submission': [
+                'invoice issue', 'submission failed', 'import failed', 'unable to import',
+                # Enhanced submission patterns
+                'documents not processed', 'submission unsuccessful', 'error importing invoice',
+                'invoice submission failed'
+            ],
+            'Invoice Errors (format mismatch)': [
+                'missing field', 'format mismatch', 'incomplete invoice', 'format error',
+                # Enhanced format patterns
+                'missing required field', 'invoice format error', 'field missing from invoice'
+            ],
+            'Inquiry/Redirection': [
+                'redirect', 'forward', 'contact instead', 'guidance needed', 'verify legitimate',
+                # Enhanced inquiry patterns
+                'reach out to', 'please check with', 'insufficient data to research',
+                'need guidance', 'please advise', 'what documentation needed',
+                'where to send payment'
+            ],
+            'Complex Queries': [
+                'multiple issues', 'complex situation', 'legal communication', 'settlement',
+                # Enhanced complexity patterns
+                'settle for', 'settlement offer', 'negotiate payment', 'attorney',
+                'law firm', 'legal counsel', 'legal action',
+                # Settlement and legal arrangement patterns
+                'settlement arrangement', 'legal settlement agreement', 'payment settlement',
+                'settlement negotiation', 'legal arrangement', 'settlement terms',
+                'attorney settlement', 'legal resolution', 'settlement discussion',
+                'complex legal matter', 'legal consultation', 'attorney involvement',
+                'legal proceedings', 'court settlement', 'mediation settlement',
+                # Complex business routing patterns
+                'complex business instructions', 'routing instructions', 'complex routing',
+                'business process instructions', 'multi step process', 'complex procedure',
+                'detailed business process', 'special handling instructions', 'complex workflow'
+            ],
             
-            # No Reply - Notifications sublabels
-            'sales_offers': ['sales offer', 'promotion', 'discount', 'special offer'],
-            'system_alerts': ['system alert', 'alert notification', 'system notification'],
-            'processing_errors': ['processing error', 'failed to process', 'processing failed'],
-            'business_closure_info': ['closure information', 'business closure info', 'closure notice'],
-            'general_thank_you': ['thank you', 'thanks', 'received your message', 'acknowledgment'],
+            # No Reply - EXACT NAMES + ENHANCED PATTERNS
+            'Sales/Offers': [
+                'sales offer', 'promotion', 'discount', 'special offer',
+                # Missing sales patterns from analysis
+                'prices increasing', 'price increase', 'limited time offer', 'hours left',
+                'sale ending', 'special pricing', 'promotional offer', 'exclusive deal',
+                'limited time', 'promotional pricing', 'discount offer',
+                # Payment plan and sales discussion patterns
+                'payment plan options', 'payment plan discussion', 'installment plan',
+                'payment arrangement offer', 'flexible payment options', 'payment terms discussion',
+                'financing options', 'payment schedule options', 'payment plan available',
+                'monthly payment plan', 'extended payment terms', 'payment flexibility'
+            ],
+            'System Alerts': [
+                'system alert', 'notification', 'maintenance',
+                # Enhanced system patterns
+                'system notification', 'automated notification', 'security alert',
+                'maintenance notification'
+            ],
+            'Processing Errors': [
+                'processing error', 'failed to process', 'delivery failed',
+                # Enhanced processing error patterns
+                'cannot be processed', 'electronic invoice rejected', 'request couldn\'t be created',
+                'system unable to process', 'mail delivery failed', 'email bounced'
+            ],
+            'Business Closure (Info only)': [
+                'closure information', 'business closure info',
+                'closure notification only'
+            ],
+            'General (Thank You)': [
+                'thank you', 'received your message', 'acknowledgment',
+                # Enhanced thank you patterns
+                'thank you for your email', 'thanks for contacting', 'still reviewing',
+                'currently reviewing', 'under review', 'we are reviewing', 'for your records'
+            ],
+            'Created': [
+                'ticket created', 'case created', 'new ticket', 'case opened',
+                # Enhanced creation patterns
+                'new ticket opened', 'support request created', 'case has been created',
+                # Additional ticket creation patterns
+                'ticket has been opened', 'new case created', 'support ticket opened',
+                'case number assigned', 'ticket number assigned', 'new support case',
+                'request has been submitted', 'ticket submitted successfully',
+                'case opened for review', 'support request received'
+            ],
+            'Resolved': [
+                'ticket resolved', 'case resolved', 'case closed', 'completed',
+                # Enhanced resolution patterns
+                'ticket has been resolved', 'marked as resolved', 'status resolved'
+            ],
+            'Open': [
+                'ticket open', 'case open', 'pending',
+                'still pending', 'case pending'
+            ],
             
-            # No Reply - Tickets/Cases sublabels  
-            'tickets_created': ['ticket created', 'case created', 'new ticket', 'case opened'],
-            'tickets_resolved': ['ticket resolved', 'case resolved', 'ticket closed', 'case closed'],
-            'tickets_open': ['ticket open', 'case open', 'still pending', 'in progress'],
+            # Invoices Request - EXACT NAME + ENHANCED PATTERNS
+            'Request (No Info)': [
+                'invoice request', 'need invoice', 'send invoice', 'provide invoice',
+                # Enhanced invoice request patterns (but excluding proof scenarios)
+                'send me the invoice', 'provide the invoice', 'need invoice copy',
+                'outstanding invoices owed', 'copies of any invoices',
+                'send invoices that are due', 'provide outstanding invoices'
+            ],
             
-            # Invoices Request sublabel
-            'invoice_request_no_info': ['invoice request', 'need invoice', 'send invoice', 'invoice copy'],
-                        
-            # Payments Claim sublabels - CORRECTED
-            'claims_paid_no_info': ['payment made', 'already paid', 'check sent', 'payment completed'],
-            'payment_confirmation': ['payment confirmation', 'proof of payment', 'payment receipt', 'payment evidence'],
-            'payment_details_received': ['payment details', 'remittance info', 'payment breakdown'],
-
-            # Auto Reply - Out of Office sublabels
-            'ooo_alternate_contact': ['alternate contact', 'contact instead', 'reach out to'],
-            'ooo_no_info': ['out of office', 'away from desk', 'automatic reply'],
-            'ooo_return_date': ['return date', 'back on', 'return', 'until'],
+            # Payments Claim - EXACT NAMES + ENHANCED PATTERNS
+            'Claims Paid (No Info)': [
+                'already paid', 'payment made', 'check sent', 'we paid',
+                # Enhanced payment claim patterns
+                'payment was made', 'bill was paid', 'payment was sent', 'payment completed',
+                'this was paid', 'account paid', 'made payment', 'been paid'
+            ],
+            'Payment Confirmation': [
+                'payment confirmation', 'proof of payment', 'payment receipt', 'eft#',
+                # Enhanced payment proof patterns
+                'invoice was paid see attachments', 'payment confirmation attached',
+                'check number', 'transaction id', 'here is proof of payment',
+                'payment receipt attached', 'wire confirmation', 'batch number',
+                'paid via transaction number'
+            ],
+            'Payment Details Received': [
+                'payment details', 'payment scheduled', 'payment timeline',
+                # Enhanced payment details patterns
+                'payment will be sent', 'payment being processed', 'check will be mailed',
+                'in process of issuing payment', 'invoices being processed for payment',
+                'will pay this online', 'working on payment', 'need time to pay'
+            ],
             
-            # Auto Reply - Miscellaneous sublabels
-            'survey': ['survey', 'feedback', 'questionnaire', 'rate'],
-            'redirects_updates': ['property manager', 'contact changed', 'forwarding', 'property changes']
+            # Auto Reply - EXACT NAMES + ENHANCED PATTERNS
+            'With Alternate Contact': [
+                'alternate contact', 'emergency contact', 'contact me at',
+                # Enhanced contact patterns
+                'out of office contact', 'emergency contact number', 'urgent matters contact',
+                'immediate assistance contact'
+            ],
+            'No Info/Autoreply': [
+                'out of office', 'automatic reply', 'auto-reply',
+                # Enhanced auto-reply patterns
+                'currently out', 'away from desk', 'on vacation', 'limited access to email',
+                'do not reply', 'automated response'
+            ],
+            'Return Date Specified': [
+                'return date', 'back on', 'returning', 'until',
+                # Enhanced return date patterns
+                'out of office until', 'will be back', 'returning on',
+                # Comprehensive return date patterns
+                'return to office on', 'back in office on', 'returning to work on',
+                'will return on', 'back from vacation on', 'return date is',
+                'expected return date', 'returning from leave on', 'back on monday',
+                'return on monday', 'back monday', 'return monday', 'back next week',
+                'return next week', 'out until friday', 'away until monday',
+                'return after holiday', 'back after holiday', 'returning after the holiday'
+            ],
+            'Survey': [
+                'survey', 'feedback', 'questionnaire', 'rate',
+                # Enhanced survey patterns
+                'feedback request', 'rate our service', 'customer satisfaction',
+                'take our survey', 'your feedback is important', 'please rate'
+            ],
+            'Redirects/Updates (property changes)': [
+                'property manager', 'contact changed', 'no longer with',
+                # Enhanced redirect patterns
+                'no longer employed', 'department changed', 'property manager changed'
+            ]
         }
         
-        # Financial terms
+        # ENHANCED financial keywords with missed patterns
         self.financial_keywords = {
-            'payment': ['payment', 'pay', 'paid', 'remittance', 'check', 'wire', 'transfer'],
-            'invoice': ['invoice', 'bill', 'statement', 'receipt'],
-            'amount': ['amount', 'total', 'sum', 'balance', 'due'],
-            'dispute': ['dispute', 'disagreement', 'contested', 'challenge'],
-            'closure': ['closed', 'closure', 'terminated', 'ceased', 'dissolved']
+            'payment_terms': [
+                'payment', 'pay', 'paid', 'remittance', 'check', 'wire', 'transfer',
+                # Enhanced payment terms
+                'settlement', 'eft', 'ach', 'electronic payment', 'credit card payment'
+            ],
+            'invoice_terms': [
+                'invoice', 'bill', 'statement', 'receipt',
+                # Enhanced invoice terms
+                'billing', 'charge', 'fee'
+            ],
+            'amount_terms': [
+                'amount', 'total', 'sum', 'balance', 'due',
+                # Enhanced amount terms
+                'cost', 'price', 'fee', 'charge'
+            ],
+            'dispute_terms': [
+                'dispute', 'disagreement', 'contested', 'challenge',
+                # Enhanced dispute terms from analysis
+                'owe nothing', 'scam', 'not legitimate', 'not our debt', 'refuse payment',
+                'cease and desist', 'fdcpa', 'legal action', 'attorney', 'debt validation'
+            ],
+            'closure_terms': [
+                'closed', 'closure', 'terminated', 'ceased', 'dissolved',
+                # Enhanced closure terms
+                'bankruptcy', 'out of business', 'liquidated'
+            ],
+            'sales_terms': [
+                'price', 'pricing', 'offer', 'deal', 'promotion', 'discount',
+                'sale', 'special', 'limited time', 'exclusive', 'payment plan', 'financing'
+            ],
+            'legal_terms': [
+                'attorney', 'lawyer', 'legal counsel', 'law firm', 'settlement',
+                'legal action', 'cease and desist', 'fdcpa', 'legal notice', 'court'
+            ],
+            'error_terms': [
+                'error', 'mistake', 'incorrect', 'wrong', 'failed', 'issue', 'problem'
+            ]
         }
         
-        # Sentiment indicators
-        self.positive_words = ['thank', 'good', 'great', 'appreciate', 'excellent', 'pleased', 'satisfied']
-        self.negative_words = ['error', 'issue', 'problem', 'wrong', 'failed', 'dispute', 'concern']
+        # ENHANCED sentiment indicators
+        self.positive_words = [
+            'thank', 'good', 'great', 'appreciate', 'excellent', 'pleased', 'satisfied',
+            # Enhanced positive words
+            'wonderful', 'fantastic', 'amazing', 'perfect', 'outstanding'
+        ]
+        self.negative_words = [
+            'error', 'issue', 'problem', 'wrong', 'failed', 'dispute', 'concern',
+            # Enhanced negative words from analysis
+            'scam', 'fraud', 'illegitimate', 'incorrect', 'unacceptable', 'terrible'
+        ]
         
-        # Urgency indicators
-        self.urgency_keywords = ['urgent', 'immediate', 'asap', 'critical', 'deadline', 'today', 'now', 'quickly']
+        # ENHANCED urgency indicators
+        self.urgency_keywords = [
+            'urgent', 'immediate', 'asap', 'critical', 'deadline', 'today', 'now', 'quickly',
+            # Enhanced urgency keywords
+            'emergency', 'rush', 'priority', 'time sensitive', 'expires'
+        ]
         
-        # Action indicators
-        self.action_keywords = ['please', 'kindly', 'request', 'need', 'send', 'provide', 'confirm', 'verify']
+        # ENHANCED action indicators
+        self.action_keywords = [
+            'please', 'kindly', 'request', 'need', 'send', 'provide', 'confirm', 'verify',
+            # Enhanced action keywords
+            'submit', 'forward', 'respond', 'reply', 'contact', 'call', 'email'
+        ]
         
-        # Complexity indicators
-        self.complexity_keywords = ['multiple', 'various', 'complex', 'detailed', 'several', 'numerous']
+        # ENHANCED complexity indicators
+        self.complexity_keywords = [
+            'multiple', 'various', 'complex', 'detailed', 'several', 'numerous',
+            # Enhanced complexity keywords
+            'complicated', 'intricate', 'extensive', 'comprehensive', 'elaborate',
+            'settlement', 'legal', 'attorney', 'routing instructions', 'business process'
+        ]
+        
+        # Dispute intensity keywords (helps with confidence scoring)
+        self.dispute_intensity_keywords = {
+            'high_intensity': [
+                'scam', 'fraud', 'cease and desist', 'fdcpa', 'attorney', 'legal action',
+                'debt validation', 'collection agency violation', 'legal notice'
+            ],
+            'medium_intensity': [
+                'dispute', 'disagree', 'contest', 'owe nothing', 'not legitimate',
+                'refuse payment', 'billing incorrect', 'not our responsibility'
+            ],
+            'low_intensity': [
+                'question', 'unclear', 'verify', 'confirm', 'looks like', 'is this'
+            ]
+        }
+        
+        # Proof indicators (helps distinguish requests vs confirmations)
+        self.proof_indicators = {
+            'providing_proof': [
+                'see attachments', 'attached', 'proof attached', 'here is proof', 
+                'confirmation attached', 'documentation attached', 'receipt attached',
+                'was paid see attachments', 'payment confirmation attached'
+            ],
+            'requesting_proof': [
+                'send me', 'provide', 'need copy', 'share', 'forward', 'need invoice',
+                'provide invoice', 'send invoice', 'copies of invoices'
+            ]
+        }
+        
+        # Return date indicators (helps with auto-reply classification)
+        self.return_date_indicators = {
+            'specific_date': [
+                'return on', 'back on', 'returning on', 'will be back on',
+                'return date is', 'expected return', 'back monday', 'return monday'
+            ],
+            'relative_date': [
+                'back next week', 'return next week', 'out until', 'away until',
+                'return after', 'back after', 'returning after'
+            ],
+            'indefinite': [
+                'return date unknown', 'indefinite leave', 'extended absence'
+            ]
+        }
+        
+        # Business instruction indicators (helps distinguish complex queries)
+        self.business_instruction_indicators = {
+            'routing_instructions': [
+                'routing instructions', 'business process', 'special handling',
+                'complex procedure', 'workflow', 'process instructions'
+            ],
+            'complex_business': [
+                'multi step process', 'detailed process', 'complex business',
+                'business instructions', 'special instructions'
+            ]
+        }
+        
+        # Sales and marketing indicators (enhanced detection)
+        self.sales_marketing_indicators = {
+            'promotional': [
+                'special offer', 'limited time', 'promotional offer', 'discount offer',
+                'exclusive deal', 'sale ending', 'hours left', 'prices increasing'
+            ],
+            'payment_plans': [
+                'payment plan', 'installment plan', 'financing options', 'flexible payment',
+                'payment arrangement', 'payment terms discussion', 'monthly payment'
+            ]
+        }
+        
+        # Ticket and case indicators (enhanced detection)
+        self.ticket_case_indicators = {
+            'creation': [
+                'ticket created', 'case created', 'new ticket', 'case opened',
+                'support request created', 'ticket has been opened', 'case number assigned'
+            ],
+            'resolution': [
+                'ticket resolved', 'case resolved', 'case closed', 'completed',
+                'marked as resolved', 'status resolved', 'ticket has been resolved'
+            ],
+            'status_update': [
+                'ticket open', 'case open', 'still pending', 'case pending',
+                'under review', 'being processed'
+            ]
+        }
     
     def analyze_text(self, text: str) -> TextAnalysis:
         """
@@ -132,15 +421,15 @@ class NLPProcessor:
             return self._get_empty_analysis()
     
     def _identify_hierarchy_topics(self, text: str) -> List[str]:
-        """Identify topics aligned with hierarchy structure."""
+        """Identify topics aligned with EXACT hierarchy structure."""
         topics = []
         
-        # Check hierarchy indicators
-        for topic, keywords in self.hierarchy_indicators.items():
+        # Check hierarchy indicators with EXACT sublabel names
+        for exact_sublabel, keywords in self.hierarchy_indicators.items():
             if any(keyword in text for keyword in keywords):
-                topics.append(topic)
+                topics.append(exact_sublabel)  # Use exact sublabel name
         
-        # Check financial categories
+        # Add financial categories (keep these as separate indicators)
         for category, keywords in self.financial_keywords.items():
             if any(keyword in text for keyword in keywords):
                 topics.append(category)
@@ -218,8 +507,8 @@ class NLPProcessor:
         """Extract key phrases relevant to classification."""
         key_phrases = []
         
-        # Add hierarchy-specific phrases
-        for topic, keywords in self.hierarchy_indicators.items():
+        # Add hierarchy-specific phrases (using exact sublabel names)
+        for exact_sublabel, keywords in self.hierarchy_indicators.items():
             for keyword in keywords:
                 if keyword in text:
                     key_phrases.append(keyword)
@@ -231,7 +520,8 @@ class NLPProcessor:
                     key_phrases.append(keyword)
         
         return list(set(key_phrases))[:10]  # Limit to top 10
-    
+
+
     def _calculate_urgency(self, text: str) -> float:
         """Calculate urgency score based on keywords."""
         urgency_count = sum(1 for keyword in self.urgency_keywords if keyword in text)
@@ -253,35 +543,36 @@ class NLPProcessor:
         return any(keyword in text for keyword in self.action_keywords)
     
     def _calculate_complexity(self, text_lower: str, original_text: str) -> float:
-        """Calculate complexity score."""
+        """Enhanced complexity calculation."""
         complexity_score = 0.0
         
-        # Check complexity keywords
+        # Complexity keywords
         complexity_count = sum(1 for keyword in self.complexity_keywords if keyword in text_lower)
         complexity_score += min(complexity_count * 0.15, 0.3)
         
-        # Check sentence count and length
+        # Sentence count
         sentences = [s.strip() for s in original_text.split('.') if s.strip()]
         if len(sentences) > 5:
             complexity_score += 0.2
         
-        # Check word count
+        # Word count
         word_count = len(original_text.split())
         if word_count > 200:
             complexity_score += 0.2
         
-        # Check multiple financial terms
+        # Multiple financial terms
         financial_count = len(self._extract_financial_terms(text_lower))
         if financial_count > 3:
-            complexity_score += 0.2
+            complexity_score += 0.15
         
-        # Check multiple topics
-        topic_count = len(self._identify_hierarchy_topics(text_lower))
-        if topic_count > 2:
-            complexity_score += 0.1
+        # Multiple hierarchy topics (using exact names)
+        hierarchy_topics = [topic for topic in self._identify_hierarchy_topics(text_lower) 
+                        if topic in self.hierarchy_indicators]
+        if len(hierarchy_topics) > 2:
+            complexity_score += 0.15
         
         return min(complexity_score, 1.0)
-    
+
     def _get_empty_analysis(self) -> TextAnalysis:
         """Return empty analysis for errors or empty input."""
         return TextAnalysis(
@@ -296,27 +587,26 @@ class NLPProcessor:
         )
 
     def get_hierarchy_topics_info(self) -> Dict[str, List[str]]:
-        """Get information about available hierarchy topics."""
+        """Get information about available hierarchy topics with EXACT names."""
         return {
             'manual_review_topics': [
-                'partial_disputed_payment', 'invoice_receipt', 'closure_notification',
-                'closure_payment_due', 'external_submission', 'invoice_errors_format',
-                'inquiry_redirection', 'complex_queries'
+                'Partial/Disputed Payment', 'Invoice Receipt', 'Closure Notification',
+                'Closure + Payment Due', 'External Submission', 'Invoice Errors (format mismatch)',
+                'Inquiry/Redirection', 'Complex Queries'
             ],
-            'no_reply_notifications_topics': [
-                'sales_offers', 'system_alerts', 'processing_errors', 
-                'business_closure_info', 'general_thank_you'
+            'no_reply_topics': [
+                'Sales/Offers', 'System Alerts', 'Processing Errors', 
+                'Business Closure (Info only)', 'General (Thank You)',
+                'Created', 'Resolved', 'Open'
             ],
-            'no_reply_tickets_topics': [
-                'tickets_created', 'tickets_resolved', 'tickets_open'
-            ],
-            'invoices_request_topics': ['request_no_info'],
+            'invoices_request_topics': ['Request (No Info)'],
             'payments_claim_topics': [
-                'claims_paid_no_info', 'payment_confirmation', 'payment_details_received'
+                'Claims Paid (No Info)', 'Payment Confirmation', 'Payment Details Received'
             ],
-            'auto_reply_ooo_topics': [
-                'with_alternate_contact', 'no_info_autoreply', 'return_date_specified'
-            ],
-            'auto_reply_misc_topics': ['survey', 'redirects_updates']
+            'auto_reply_topics': [
+                'With Alternate Contact', 'No Info/Autoreply', 'Return Date Specified',
+                'Survey', 'Redirects/Updates (property changes)'
+            ]
         }
+
 

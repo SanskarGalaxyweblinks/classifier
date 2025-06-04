@@ -1,5 +1,6 @@
 """
-Clean Email Classifier with Simple Label Mapping - NO THREAD LOGIC
+Clean Email Classifier - Aligned with New Preprocessor Architecture
+Focused, quality code without unnecessary complexity
 """
 
 import logging
@@ -15,72 +16,62 @@ from email_classifier.rule_engine import RuleEngine, RuleResult
 logger = logging.getLogger(__name__)
 
 class EmailClassifier:
-    """Clean Email Classifier with ALLOWED_LABELS mapping - Thread logic removed"""
+    """Clean Email Classifier aligned with enhanced preprocessor"""
     
     ALLOWED_LABELS = [
         "no_reply_no_info", "no_reply_with_info", 
         "auto_reply_no_info", "auto_reply_with_info",
         "invoice_request_no_info", "claims_paid_no_proof", 
-        "claims_paid_with_proof", "manual_review", "Uncategorized"
+        "claims_paid_with_proof", "manual_review", "uncategorized"
     ]
     
     def __init__(self):
         self.logger = logging.getLogger(__name__)
-        
-        # Initialize components
         self.preprocessor = EmailPreprocessor()
         self.nlp_processor = NLPProcessor()
         self.ml_classifier = MLClassifier()
         self.rule_engine = RuleEngine()
-        
-        # Simple info detection patterns
-        self.phone_pattern = r'\b\d{3}[-.]?\d{3}[-.]?\d{4}\b|\(\d{3}\)\s*\d{3}[-.]?\d{4}'
-        self.email_pattern = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
-        self.ticket_pattern = r'(?:ticket|case|#)\s*[:\s]*[A-Z0-9-]+'
-        
-        self.logger.info("✅ EmailClassifier initialized (no thread logic)")
+        self.logger.info("✅ EmailClassifier initialized")
 
     def classify_email(self, subject: str, body: str, email_id: Optional[int] = None) -> Dict[str, Any]:
-        """Main classification with mapping to ALLOWED_LABELS - NO THREAD LOGIC"""
+        """Main classification method"""
         start_time = time.time()
         
         try:
-            # Process email
-            processed = self.preprocessor.preprocess_email(subject, body)
+            # Step 1: Preprocess
+            processed = self.preprocessor.preprocess_email(subject or "", body)
             if not processed.cleaned_text:
                 return self._fallback_result("Empty content", start_time)
             
-            # Get classifications with individual error handling
+            # Step 2: NLP Analysis
             try:
                 analysis = self.nlp_processor.analyze_text(processed.cleaned_text)
             except Exception as e:
-                self.logger.warning(f"NLP analysis failed: {e}")
+                self.logger.warning(f"NLP failed: {e}")
                 analysis = None
             
+            # Step 3: ML Classification
             try:
-                # ML Classifier call - removed has_thread parameter
                 ml_result = self.ml_classifier.classify_email(processed.cleaned_text)
             except Exception as e:
-                self.logger.warning(f"ML classification failed: {e}")
-                # Create fallback ML result
+                self.logger.warning(f"ML failed: {e}")
                 ml_result = {
                     'category': 'Manual Review',
-                    'subcategory': 'Complex Queries', 
+                    'subcategory': 'Complex Queries',
                     'confidence': 0.5,
                     'method_used': 'ml_fallback',
                     'reason': f'ML error: {e}'
                 }
             
+            # Step 4: Rule Classification
             try:
-                # Rule Engine call - removed has_thread parameter
                 rule_result = self.rule_engine.classify_sublabel(
                     ml_result['category'], processed.cleaned_text, 
                     analysis=analysis, ml_result=ml_result,
                     subject=processed.cleaned_subject
                 )
             except Exception as e:
-                self.logger.warning(f"Rule engine failed: {e}")
-                # Create fallback rule result
+                self.logger.warning(f"Rule failed: {e}")
                 rule_result = RuleResult(
                     category='Manual Review',
                     subcategory='Complex Queries',
@@ -89,74 +80,29 @@ class EmailClassifier:
                     matched_rules=['rule_fallback']
                 )
             
-            # Debug logging
-            self.logger.debug(f"Email {email_id}: ML={ml_result['category']}/{ml_result.get('subcategory', 'N/A')}, "
-                            f"Rule={rule_result.category}/{rule_result.subcategory}")
+            # Step 5: Get best classification
+            best_result = self._get_best_classification(ml_result, rule_result, start_time)
             
-            # Create detailed result - removed thread logic
-            detailed_result = self._get_best_classification(ml_result, rule_result, processed, analysis, start_time)
+            # Step 6: Map to final label using NLP entities
+            final_label = self._map_to_final_label(best_result, processed, analysis)
             
-            # Map to final label
-            final_label = self._map_to_final_label(detailed_result, processed.cleaned_text + " " + processed.cleaned_subject)
+            result = {**best_result, 'final_label': final_label}
             
-            # Return result with final label
-            result = {**detailed_result, 'final_label': final_label}
-            
-            self.logger.info(f"Email {email_id}: {detailed_result['category']}/{detailed_result['subcategory']} → {final_label}")
+            self.logger.info(f"Email {email_id}: {best_result['category']}/{best_result['subcategory']} → {final_label}")
             return result
             
         except Exception as e:
-            self.logger.error(f"Classification error for email {email_id}: {e}")
-            import traceback
-            self.logger.error(f"Traceback: {traceback.format_exc()}")
-            return self._fallback_result(f"Critical error: {e}", start_time)
+            self.logger.error(f"Classification error: {e}")
+            return self._fallback_result(f"Error: {e}", start_time)
 
-    def debug_classification(self, subject: str, body: str) -> Dict[str, Any]:
-        """Debug method to see classification step-by-step - NO THREAD LOGIC"""
-        print(f"=== DEBUG CLASSIFICATION ===")
-        print(f"Subject: {subject[:50]}...")
-        print(f"Body length: {len(body)}")
-        
-        try:
-            processed = self.preprocessor.preprocess_email(subject, body)
-            print(f"Processed text length: {len(processed.cleaned_text)}")
-            print(f"Has thread: {processed.has_thread}")
-            
-            # ML classification - removed has_thread parameter
-            ml_result = self.ml_classifier.classify_email(processed.cleaned_text)
-            print(f"ML Result: {ml_result['category']}/{ml_result.get('subcategory', 'N/A')} (conf: {ml_result['confidence']:.2f})")
-            
-            # Rule classification - removed has_thread parameter
-            rule_result = self.rule_engine.classify_sublabel(
-                ml_result['category'], processed.cleaned_text, 
-                subject=processed.cleaned_subject
-            )
-            print(f"Rule Result: {rule_result.category}/{rule_result.subcategory} (conf: {rule_result.confidence:.2f})")
-            
-            return {'ml': ml_result, 'rule': rule_result}
-            
-        except Exception as e:
-            print(f"ERROR: {e}")
-            import traceback
-            print(traceback.format_exc())
-            return {'error': str(e)}
-
-    def _get_best_classification(self, ml_result, rule_result, processed, analysis, start_time):
-        """Get best classification from ML and Rule results - NO THREAD LOGIC"""
-        # Simplified context without thread logic
-        context = {
-            'has_thread': processed.has_thread,  # Keep for info but don't use in logic
-            'thread_count': getattr(processed, 'thread_count', 0),
-            'current_reply': 0
-        }
-        
+    def _get_best_classification(self, ml_result, rule_result, start_time):
+        """Simple confidence-based classification selection"""
         base_result = {
-            'thread_context': context,
             'processing_time': time.time() - start_time,
             'timestamp': time.time()
         }
         
-        # High confidence rule (priority 1)
+        # High confidence rule
         if rule_result.confidence >= 0.8:
             return {
                 **base_result,
@@ -168,19 +114,20 @@ class EmailClassifier:
                 'matched_patterns': rule_result.matched_rules
             }
         
-        # Combined ML + Rule (priority 2) - no thread bonus
+        # Combined ML + Rule
         if ml_result['confidence'] >= 0.6 and rule_result.confidence >= 0.4:
+            combined_confidence = (ml_result['confidence'] * 0.6) + (rule_result.confidence * 0.4)
             return {
                 **base_result,
                 'category': rule_result.category,
                 'subcategory': rule_result.subcategory,
-                'confidence': round((ml_result['confidence'] * 0.6) + (rule_result.confidence * 0.4), 2),
+                'confidence': round(combined_confidence, 2),
                 'method_used': 'ml_rule_combined',
-                'reason': f"Combined: {rule_result.reason}",
+                'reason': rule_result.reason,
                 'matched_patterns': rule_result.matched_rules
             }
         
-        # Rule fallback (priority 3)
+        # Rule fallback
         return {
             **base_result,
             'category': rule_result.category,
@@ -191,8 +138,8 @@ class EmailClassifier:
             'matched_patterns': rule_result.matched_rules
         }
 
-    def _map_to_final_label(self, result: Dict[str, Any], full_text: str) -> str:
-        """Map detailed result to ALLOWED_LABELS"""
+    def _map_to_final_label(self, result: Dict[str, Any], processed, analysis: Optional[TextAnalysis]) -> str:
+        """Map to final labels using NLP entities instead of regex patterns"""
         category = result['category']
         subcategory = result['subcategory']
         
@@ -200,9 +147,10 @@ class EmailClassifier:
         if category == "Manual Review":
             return "manual_review"
         
-        # No Reply - check for info
+        # No Reply - check for info using NLP entities
         elif category == "No Reply (with/without info)":
-            return "no_reply_with_info" if self._has_info(full_text) else "no_reply_no_info"
+            has_info = self._has_info_from_nlp(analysis)
+            return "no_reply_with_info" if has_info else "no_reply_no_info"
         
         # Invoice Request
         elif category == "Invoices Request":
@@ -215,47 +163,55 @@ class EmailClassifier:
             else:  # Payment Details Received or Payment Confirmation
                 return "claims_paid_with_proof"
         
-        # Auto Reply - check for contact info
+        # Auto Reply - check for contact info using NLP entities
         elif category == "Auto Reply (with/without info)":
-            return "auto_reply_with_info" if self._has_contact_info(full_text) else "auto_reply_no_info"
+            has_contact = self._has_contact_from_nlp(analysis)
+            return "auto_reply_with_info" if has_contact else "auto_reply_no_info"
         
         # Uncategorized
         elif category == "Uncategorized":
-            return "Uncategorized"
+            return "uncategorized"
         
-        # Default fallback
         else:
             return "manual_review"
 
-    def _has_info(self, text: str) -> bool:
-        """Check if No Reply email has useful info (tickets, emails, phones)"""
-        return (re.search(self.ticket_pattern, text, re.IGNORECASE) or 
-                re.search(self.email_pattern, text) or 
-                re.search(self.phone_pattern, text) or
-                any(word in text.lower() for word in ['case number', 'ticket number', 'support id']))
+    def _has_info_from_nlp(self, analysis: Optional[TextAnalysis]) -> bool:
+        """Check for useful info using NLP entities instead of regex"""
+        if not analysis or not analysis.entities:
+            return False
+        
+        # Check entity types that indicate useful information
+        useful_entity_types = ['ACCOUNT', 'CASE_TICKET', 'INVOICE', 'TRANSACTION', 'REFERENCE', 'EMAIL', 'PHONE']
+        
+        for entity in analysis.entities:
+            if entity.get('label', '').upper() in useful_entity_types:
+                return True
+        
+        return False
 
-    def _has_contact_info(self, text: str) -> bool:
-        """Check if Auto Reply has contact information"""
-        text_lower = text.lower()
+    def _has_contact_from_nlp(self, analysis: Optional[TextAnalysis]) -> bool:
+        """Check for contact info using NLP entities instead of regex"""
+        if not analysis or not analysis.entities:
+            return False
         
-        # Check for phone/email
-        if re.search(self.phone_pattern, text) or re.search(self.email_pattern, text):
-            return True
+        # Check for contact-related entities
+        contact_entity_types = ['EMAIL', 'PHONE']
         
-        # Check for contact phrases
-        contact_phrases = ['contact me at', 'reach out to', 'call me', 'alternate contact', 'emergency contact']
-        if any(phrase in text_lower for phrase in contact_phrases):
-            return True
+        for entity in analysis.entities:
+            if entity.get('label', '').upper() in contact_entity_types:
+                return True
         
-        # Check for return date + contact combo
-        if any(word in text_lower for word in ['return', 'back on']) and \
-           any(word in text_lower for word in ['contact', 'call', 'reach']):
-            return True
+        # Check key phrases for contact information
+        if analysis.key_phrases:
+            contact_phrases = ['contact me at', 'reach out to', 'alternate contact', 'emergency contact']
+            for phrase in analysis.key_phrases:
+                if any(contact in phrase.lower() for contact in contact_phrases):
+                    return True
         
         return False
 
     def _fallback_result(self, reason: str, start_time: float) -> Dict[str, Any]:
-        """Create a fallback result when classification fails - NO THREAD LOGIC"""
+        """Simple fallback result"""
         return {
             'category': 'Manual Review',
             'subcategory': 'Error Handling',
@@ -263,12 +219,36 @@ class EmailClassifier:
             'method_used': 'fallback',
             'reason': reason,
             'matched_patterns': [],
-            'thread_context': {
-                'has_thread': False,
-                'thread_count': 0,
-                'current_reply': 0
-            },
             'processing_time': time.time() - start_time,
             'timestamp': time.time(),
             'final_label': 'manual_review'
         }
+
+    def debug_classification(self, subject: str, body: str) -> Dict[str, Any]:
+        """Simple debug method"""
+        print(f"=== DEBUG CLASSIFICATION ===")
+        print(f"Subject: {subject[:50]}...")
+        print(f"Body length: {len(body)}")
+        
+        try:
+            processed = self.preprocessor.preprocess_email(subject, body)
+            print(f"Cleaned text length: {len(processed.cleaned_text)}")
+            print(f"Has thread: {processed.has_thread}")
+            
+            ml_result = self.ml_classifier.classify_email(processed.cleaned_text)
+            print(f"ML: {ml_result['category']}/{ml_result.get('subcategory', 'N/A')} (conf: {ml_result['confidence']:.2f})")
+            
+            rule_result = self.rule_engine.classify_sublabel(
+                ml_result['category'], processed.cleaned_text, 
+                subject=processed.cleaned_subject
+            )
+            print(f"Rule: {rule_result.category}/{rule_result.subcategory} (conf: {rule_result.confidence:.2f})")
+            
+            final_result = self.classify_email(subject, body)
+            print(f"Final: {final_result['final_label']}")
+            
+            return {'ml': ml_result, 'rule': rule_result.__dict__, 'final': final_result}
+            
+        except Exception as e:
+            print(f"ERROR: {e}")
+            return {'error': str(e)}

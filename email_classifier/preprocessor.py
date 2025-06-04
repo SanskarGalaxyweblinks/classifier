@@ -2,8 +2,6 @@ import re
 import logging
 import unicodedata
 from typing import Dict, List, Optional, Tuple
-from bs4 import BeautifulSoup
-import html2text
 from dataclasses import dataclass
 import time
 
@@ -28,17 +26,44 @@ class ProcessedEmail:
     redaction_count: int = 0
 
 class EmailPreprocessor:
-    # ====== MINIMAL NOISE PATTERNS (only obvious noise) ======
+    # ====== CUSTOM FAREWELL PHRASES ======
+    FAREWELL_PHRASES = [
+        "thanks", "thank you", "thanky you", "regards", "best regards", "many thanks", "cheers",
+        "have a good day", "have a nice day", "have a great day", "have a wonderful day", "have a pleasant day",
+        "kind regards", "warm regards", "may regards", "sincerely", "yours sincerely", "yours truly",
+        "yours faithfully", "take care", "stay safe", "with regards", "with best wishes", "respectfully"
+    ]
+    
+    # ====== SAFETY WARNING KEYWORDS ======
+    SAFETY_WARNING_KEYWORDS = [
+        "this is the first time you received an email from",
+        "some people who received this message don't often get email from",
+        "learn why this is important",
+        "exercise caution when clicking links",
+        "before validating its authenticity"
+    ]
+
+    # ====== ENHANCED NOISE PATTERNS (more flexible matching) ======
     NOISE_PATTERNS = [
         r'EXTERNAL:\s*This e-mail originates from outside the organization\.',
         r'Learn why this is important',
         r'\[Learn why this is important\]',
         r'https://aka\.ms/LearnAboutSenderIdentification',
 
-        # Microsoft banner patterns - COMPLETE REMOVAL
-        r'This is the first time you received an email from this sender \([^)]+\)\.',
-        r'Exercise caution when clicking links, opening attachments or taking further action, before validating its authenticity\.',
-        r'Some people who received this message don\'t often get email from [^.]+\.',
+        # Microsoft banner patterns - ENHANCED with more flexible matching
+        r'This is the first time you received an email from this sender\s*\([^)]+\)\.?\s*Exercise caution when clicking links[^.]*\.',
+        r'This is the first time you received an email from this sender\s*\([^)]+\)\.?',
+        r'Exercise caution when clicking links, opening attachments or taking further action, before validating its authenticity\.?',
+        r'Some people who received this message don\'t often get email from\s+[^\s.]+\.?\s*Learn why this is important',
+        r'Some people who received this message don\'t often get email from\s+[^\s.]+\.?',
+        
+        # More general patterns for safety warnings
+        r'This is the first time.*?received an email from.*?sender.*?\([^)]+\)',
+        r'Exercise caution when clicking.*?before validating.*?authenticity',
+        r'Some people.*?don\'t often get email from.*?[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}',
+        
+        # Multi-line safety warning block (the entire warning as one block)
+        r'This is the first time you received an email from this sender.*?Exercise caution.*?authenticity\.?\s*Some people.*?don\'t often get email from.*?Learn why this is important',
         
         # Only remove standalone email headers (not content)
         r'^From:\s*[^\n]*$',
@@ -49,11 +74,6 @@ class EmailPreprocessor:
         
         # Reference tracking
         r'Ref:MSG[A-Za-z0-9]+',
-
-        # [OPTIONAL] Legal disclaimers
-        # r'The information transmitted \(including attachments\) is covered by the Electronic Communications Privacy Act.*',
-        # r'Confidentiality Notice:.*',
-        # r'If you received this in error, please contact the sender.*'
     ]
 
     # ====== STRONG THREAD SEPARATORS (for cutting threads) ======
@@ -81,15 +101,9 @@ class EmailPreprocessor:
     def __init__(self):
         self.logger = logging.getLogger(__name__)
         
-        # Initialize HTML to text converter
-        self.html_converter = html2text.HTML2Text()
-        self.html_converter.ignore_links = False
-        self.html_converter.ignore_images = True
-        self.html_converter.ignore_tables = True
-        
         # Compile patterns for performance
         self.compiled_noise_patterns = [
-            re.compile(p, re.IGNORECASE | re.MULTILINE) 
+            re.compile(p, re.IGNORECASE | re.MULTILINE | re.DOTALL) 
             for p in self.NOISE_PATTERNS
         ]
         
@@ -98,7 +112,29 @@ class EmailPreprocessor:
             for p in self.THREAD_SEPARATORS
         ]
         
-        logger.info("Initialized EmailPreprocessor")
+        # Compile custom patterns
+        self.farewell_pattern = re.compile(
+            r"^\s*(?:" + "|".join(re.escape(p) for p in self.FAREWELL_PHRASES) + r")[\s\.,!]*$", 
+            re.IGNORECASE
+        )
+        
+        self.reply_line_pattern = re.compile(
+            r"^On\s+\w+\s+\d{1,2},\s+\d{4},\s+at\s+[\d:]+.*wrote:", 
+            re.IGNORECASE
+        )
+        
+        self.sender_warning_pattern = re.compile(
+            r"^\[.*learn why this is important.*\]$", 
+            re.IGNORECASE
+        )
+        
+        # Enhanced safety warning pattern for line-by-line cleaning
+        self.enhanced_safety_pattern = re.compile(
+            r"(this is the first time.*?sender|exercise caution when clicking|some people.*?don't often get email|learn why this is important)", 
+            re.IGNORECASE
+        )
+        
+        logger.info("Initialized EmailPreprocessor with enhanced cleaning patterns")
 
     def preprocess_email(self, subject: str, body: str) -> ProcessedEmail:
         """Preprocess email by cleaning and extracting actionable text."""
@@ -108,12 +144,7 @@ class EmailPreprocessor:
         try:
             original_body = body
             
-            # Convert HTML to text if needed
-            if self._is_html(body):
-                body = self._convert_html_to_text(body)
-                logger.info("Converted HTML to text")
-            
-            # Clean subject
+            # Clean subject (keep existing logic)
             cleaned_subject = self._clean_subject(subject)
             logger.info(f"Cleaned subject: {cleaned_subject}")
             
@@ -121,9 +152,8 @@ class EmailPreprocessor:
             current_reply = self._extract_current_reply(body)
             logger.info(f"Extracted current reply (length: {len(current_reply)})")
             
-            # MAIN CHANGE: Clean the FULL BODY, not just current reply
-            # This preserves complete email content for classification and DB updates
-            cleaned_text = self._clean_full_body(body)
+            # Apply custom body cleaning followed by existing cleaning
+            cleaned_text = self._clean_full_body_enhanced(body)
             
             # SAFETY CHECK: Ensure we have substantial content
             if len(cleaned_text.strip()) < 50:
@@ -144,12 +174,12 @@ class EmailPreprocessor:
                 current_reply=current_reply,
                 has_thread=has_thread,
                 thread_count=thread_count,
-                cleaned_text=cleaned_text,  # This is the FULL BODY now
+                cleaned_text=cleaned_text,
                 cleaned_subject=cleaned_subject,
                 original_body=original_body,
                 processing_time=processing_time,
                 compression_ratio=compression_ratio,
-                redaction_count=0  # No redaction for DB purposes
+                redaction_count=0
             )
             
         except Exception as e:
@@ -165,48 +195,6 @@ class EmailPreprocessor:
                 compression_ratio=0.0,
                 redaction_count=0
             )
-
-    def _convert_html_to_text(self, html: str) -> str:
-        """Convert HTML to plain text - CONTENT PRESERVING VERSION."""
-        try:
-            logger.info(f"Original HTML length: {len(html)}")
-            
-            soup = BeautifulSoup(html, 'html.parser')
-            logger.info(f"After BeautifulSoup parsing: {len(str(soup))}")
-            
-            # ONLY remove truly unwanted elements
-            for element in soup(["script", "style"]):
-                element.decompose()
-            
-            # Remove 1x1 tracking pixels only
-            for img in soup.find_all('img'):
-                width = img.get('width')
-                height = img.get('height')
-                if width == '1' and height == '1':
-                    img.decompose()
-            
-            logger.info(f"After removing unwanted elements: {len(str(soup))}")
-            
-            # Get text content - PRESERVE EVERYTHING
-            text = soup.get_text(separator='\n', strip=True)
-            logger.info(f"After get_text: {len(text)}")
-            
-            # Minimal normalization
-            text = self._normalize_text(text)
-            
-            # Remove only obvious HTML artifacts
-            text = re.sub(r'&nbsp;', ' ', text)
-            text = re.sub(r'&[a-zA-Z]+;', ' ', text)
-            text = re.sub(r'&#\d+;', ' ', text)
-            
-            logger.info(f"Final converted text length: {len(text)}")
-            return text
-            
-        except Exception as e:
-            logger.error(f"Error converting HTML to text: {str(e)}")
-            # FALLBACK: Just strip HTML tags
-            fallback = re.sub(r'<[^>]+>', ' ', html)
-            return re.sub(r'\s+', ' ', fallback).strip()
 
     def _normalize_text(self, text: str) -> str:
         """Normalize text by handling special characters and whitespace."""
@@ -251,7 +239,6 @@ class EmailPreprocessor:
                     logger.info(f"Found thread marker, extracted current reply")
                     return content_before
         
-        # If no thread found, return full text
         logger.info("No thread marker found, using full text")
         return text
 
@@ -266,35 +253,85 @@ class EmailPreprocessor:
         
         return subject.strip()
 
-    def _clean_full_body(self, text: str) -> str:
-        """Clean FULL EMAIL BODY - remove threads but preserve business content."""
-        logger.info(f"Starting full body cleaning. Original length: {len(text)}")
+    def _clean_full_body_enhanced(self, text: str) -> str:
+        """Enhanced full body cleaning: Custom cleaning first, then existing patterns."""
+        logger.info(f"Starting enhanced full body cleaning. Original length: {len(text)}")
         
-        # STEP 1: Remove thread content first (Outlook/Gmail then patterns)
+        # STEP 1: Apply custom line-by-line cleaning (your logic)
+        text = self._apply_custom_cleaning(text)
+        logger.info(f"After custom cleaning: {len(text)}")
+        
+        # STEP 2: Remove thread content (existing logic)
         text = self._remove_thread_content(text)
         logger.info(f"After thread removal: {len(text)}")
         
-        # STEP 2: Normalize text
+        # STEP 3: Normalize text
         text = self._normalize_text(text)
         
-        # STEP 3: Remove ONLY minimal noise patterns
+        # STEP 4: Remove noise patterns (existing logic) - Enhanced patterns
         for pattern in self.compiled_noise_patterns:
             before_text = text
             text = pattern.sub(' ', text)
             if text != before_text:
                 logger.info(f"Removed noise pattern")
         
-        # STEP 4: Clean up whitespace
+        # STEP 5: Clean up whitespace and markdown
         text = re.sub(r'\s+', ' ', text)
         text = re.sub(r'\n\s*\n', '\n', text)
-        text = text.strip()
-        
-        # STEP 5: Remove basic markdown artifacts only
         text = re.sub(r'\[([^\]]*)\]\([^\)]*\)', r'\1', text)  # Links
         text = re.sub(r'[*_~`]{2,}', '', text)  # Formatting
+        text = text.strip()
         
-        logger.info(f"Final full body length: {len(text)}")
+        logger.info(f"Final enhanced body length: {len(text)}")
         return text
+
+    def _apply_custom_cleaning(self, text: str) -> str:
+        """Apply your custom line-by-line cleaning logic with enhanced safety warning detection."""
+        logger.info("Applying custom line-by-line cleaning")
+        
+        lines = [line.strip() for line in text.strip().split("\n") if line.strip()]
+        output_lines = []
+        
+        for line in lines:
+            lower_line = line.lower()
+            
+            # Remove everything after reply chain
+            if self.reply_line_pattern.match(line):
+                logger.info("Found reply line pattern, stopping processing")
+                break
+            
+            # Remove everything after farewell
+            if self.farewell_pattern.match(line):
+                logger.info("Found farewell pattern, stopping processing")
+                break
+            
+            # Enhanced safety warning detection
+            if self.enhanced_safety_pattern.search(line):
+                logger.info(f"Skipped safety warning line: {line[:50]}...")
+                continue
+            
+            # Skip known warning lines
+            if lower_line.startswith("caution :"):
+                logger.info("Skipped caution line")
+                continue
+                
+            if lower_line == "external: this e-mail originates from outside the organization.":
+                logger.info("Skipped external email warning")
+                continue
+                
+            if self.sender_warning_pattern.match(line):
+                logger.info("Skipped sender warning pattern")
+                continue
+                
+            if any(keyword in lower_line for keyword in self.SAFETY_WARNING_KEYWORDS):
+                logger.info("Skipped safety warning keyword line")
+                continue
+            
+            output_lines.append(line)
+        
+        result = '\n'.join(output_lines)
+        logger.info(f"Custom cleaning completed. Lines processed: {len(lines)}, Lines kept: {len(output_lines)}")
+        return result
 
     def _minimal_clean(self, text: str) -> str:
         """Minimal cleaning - preserve everything."""
@@ -303,9 +340,12 @@ class EmailPreprocessor:
         # Just normalize
         text = self._normalize_text(text)
         
-        # Remove only the most obvious noise
+        # Remove only the most obvious noise including safety warnings
         text = re.sub(r'EXTERNAL:\s*This e-mail originates from outside the organization\.', '', text)
         text = re.sub(r'Learn why this is important', '', text)
+        text = re.sub(r'This is the first time.*?sender.*?\([^)]+\)', '', text, flags=re.IGNORECASE)
+        text = re.sub(r'Exercise caution when clicking.*?authenticity', '', text, flags=re.IGNORECASE)
+        text = re.sub(r'Some people.*?don\'t often get email from.*?@[^\s.]+', '', text, flags=re.IGNORECASE)
         
         return text.strip()
 
@@ -333,16 +373,5 @@ class EmailPreprocessor:
                 else:
                     logger.info(f"Thread marker found but content too short, keeping full text")
         
-        # If no thread found, return original text
         logger.info("No thread markers found, keeping full text")
         return text
-
-    def _count_redactions(self, text: str) -> int:
-        """Count redacted items - should be 0 for full body."""
-        return 0  # No redaction for full body
-
-    def _is_html(self, text: str) -> bool:
-        """Check if text contains HTML."""
-        return bool(re.search(r'<[^>]+>', text))
-
-    

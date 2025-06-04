@@ -16,218 +16,246 @@ class PatternMatcher:
         # FIXED patterns with proper word boundaries
         self.patterns = {
             "Manual Review": {
-                # Disputes & Payments - ENHANCED with missing legal patterns
                 "Partial/Disputed Payment": [
-                    # Core dispute patterns
-                    r"amount.*is.*in.*dispute", r"balance.*is.*not.*ours", r"not.*our.*responsibility", 
-                    r"do.*not.*owe", r"\bcontested\b", r"\bdisagreement\b", r"formally.*disputing",
-                    r"dispute.*payment", r"contested.*payment", r"challenge.*payment",
-                    r"debt.*is.*disputed", r"cease.*and.*desist", r"do.*not.*acknowledge.*debt",
-                    r"\bfdcpa\b", r"billing.*error.*dispute", r"not.*properly.*billed",
-                    r"wrong.*entity", r"dispute.*billing", r"disputing.*this.*debt",
-                    r"owe.*them.*nothing", r"owe.*nothing", r"consider.*this.*a.*scam", 
-                    r"looks.*like.*a.*scam", r"is.*this.*legitimate", r"verify.*this.*is.*real",
-                    
-                    # HIGH PRIORITY FIX: Legal/Cease & Desist patterns (Emails 5 & 6)
-                    r"cease.*and.*desist.*letter", r"legal.*notice", r"fdcpa.*violation",
-                    r"do.*not.*acknowledge.*this.*debt", r"formally.*dispute.*this.*debt",
+                    # Dispute & legal statements (well-bounded, grouped)
+                    r"amount.*is.*in.*dispute", r"balance.*is.*not.*ours", r"not.*our.*responsibility",
+                    r"do.*not.*owe", r"\bcontested\b", r"\bdisagreement\b",
+                    r"formally.*disputing", r"dispute.*payment", r"contested.*payment",
+                    r"challenge.*payment", r"debt.*is.*disputed", r"cease.*and.*desist",
+                    r"do.*not.*acknowledge.*debt", r"\bfdcpa\b", r"billing.*error.*dispute",
+                    r"not.*properly.*billed", r"wrong.*entity", r"dispute.*billing",
+                    r"disputing.*this.*debt", r"owe.*them.*nothing", r"owe.*nothing",
+                    r"consider.*this.*a.*scam", r"looks.*like.*a.*scam", r"is.*this.*legitimate",
+                    r"verify.*this.*is.*real", r"cease.*and.*desist.*letter", r"legal.*notice",
+                    r"fdcpa.*violation", r"do.*not.*acknowledge.*this.*debt", r"formally.*dispute.*this.*debt",
                     r"debt.*validation.*request", r"legal.*representation", r"attorney.*correspondence",
                     r"collection.*agency.*violation", r"fair.*debt.*collection", r"cease.*all.*communication",
                     r"legal.*action.*threatened", r"debt.*collector.*harassment", r"validation.*of.*debt",
                     r"cease.*and.*desist.*all.*contact", r"legal.*counsel.*representation"
                 ],
-                
-                # Invoice Receipt - FIXED to be more specific
+
                 "Invoice Receipt": [
+                    # Specific invoice/proof attachments, or error documentation
                     r"invoice.*attached.*as.*proof", r"attached.*invoice.*copy", r"proof.*of.*invoice.*attached",
-                    r"invoice.*documentation.*attached", r"here.*is.*the.*invoice.*copy",
-                    r"invoice.*receipt.*attached", r"copy.*of.*invoice.*attached.*for.*your.*records",
-                    
-                    # MEDIUM PRIORITY FIX: Payment documentation patterns (Email 139)
-                    r"payment.*made.*in.*error.*documentation", r"error.*payment.*proof",
-                    r"documentation.*for.*payment.*error", r"proof.*of.*payment.*error",
+                    r"invoice.*documentation.*attached", r"here.*is.*the.*invoice.*copy", r"invoice.*receipt.*attached",
+                    r"copy.*of.*invoice.*attached.*for.*your.*records", r"payment.*made.*in.*error.*documentation",
+                    r"error.*payment.*proof", r"documentation.*for.*payment.*error", r"proof.*of.*payment.*error",
                     r"attached.*payment.*documentation", r"payment.*error.*receipt"
                 ],
 
-                # Business Closure - SIMPLIFIED
                 "Closure Notification": [
-                    r"business.*closed", r"company.*closed", r"out.*of.*business", r"ceased.*operations",
-                    r"filed.*bankruptcy", r"bankruptcy.*protection", r"chapter.*7", r"chapter.*11"
+                    r"business.*closed", r"company.*closed", r"out.*of.*business",
+                    r"ceased.*operations", r"filed.*bankruptcy", r"bankruptcy.*protection",
+                    r"chapter.*7", r"chapter.*11"
                 ],
-                
+
                 "Closure + Payment Due": [
                     r"closed.*payment.*due", r"business.*closed.*outstanding", r"bankruptcy.*payment.*due",
                     r"closure.*with.*outstanding.*payment"
                 ],
-                
-                # Invoices - CLEAR DISTINCTION
+
                 "External Submission": [
-                    r"invoice.*submission.*failed", r"import.*failed", r"failed.*import", r"unable.*to.*import",
-                    r"documents.*not.*processed", r"submission.*unsuccessful", r"error.*importing.*invoice"
+                    r"invoice.*submission.*failed", r"import.*failed", r"failed.*import",
+                    r"unable.*to.*import", r"documents.*not.*processed", r"submission.*unsuccessful",
+                    r"error.*importing.*invoice"
                 ],
-                
+
                 "Invoice Errors (format mismatch)": [
-                    r"missing.*required.*field", r"format.*mismatch", r"incomplete.*invoice", 
+                    r"missing.*required.*field", r"format.*mismatch", r"incomplete.*invoice",
                     r"invoice.*format.*error", r"field.*missing.*from.*invoice"
                 ],
-                
-                # Inquiry/Redirection - CLEANED
+
                 "Inquiry/Redirection": [
                     r"insufficient.*data.*to.*research", r"need.*guidance", r"please.*advise",
-                    r"redirect.*to", r"contact.*instead", r"reach.*out.*to", r"please.*check.*with",
-                    r"what.*documentation.*needed", r"where.*to.*send.*payment",
+                    r"redirect.*to", r"contact.*instead", r"reach.*out.*to",
+                    r"please.*check.*with", r"what.*documentation.*needed", r"where.*to.*send.*payment",
                     r"verify.*legitimate", r"looks.*like.*a.*scam", r"are.*you.*legitimate"
                 ],
 
-                # HIGH PRIORITY FIX: Enhanced Complex Queries patterns (Email 31)
                 "Complex Queries": [
                     r"multiple.*issues", r"complex.*situation", r"legal.*communication",
                     r"settle.*for.*\$", r"settlement.*offer", r"negotiate.*payment",
-                    
-                    # Settlement and legal arrangement patterns
                     r"settlement.*arrangement", r"legal.*settlement.*agreement", r"payment.*settlement",
                     r"settlement.*negotiation", r"legal.*arrangement", r"settlement.*terms",
                     r"attorney.*settlement", r"legal.*resolution", r"settlement.*discussion",
                     r"complex.*legal.*matter", r"legal.*consultation", r"attorney.*involvement",
                     r"legal.*proceedings", r"court.*settlement", r"mediation.*settlement",
-                    
-                    # Complex business routing patterns (Email 41)
                     r"complex.*business.*instructions", r"routing.*instructions", r"complex.*routing",
                     r"business.*process.*instructions", r"multi.*step.*process", r"complex.*procedure",
                     r"detailed.*business.*process", r"special.*handling.*instructions", r"complex.*workflow"
                 ]
             },
-            
+ 
             "No Reply (with/without info)": {
-                # MEDIUM PRIORITY FIX: Enhanced Sales/Offers patterns (Email 94)
                 "Sales/Offers": [
                     r"special.*offer", r"limited.*time.*offer", r"promotional.*offer", 
-                    r"discount.*offer", r"exclusive.*deal", r"prices.*increasing", r"limited.*time", r"hours.*left", 
-                    r"special.*pricing", r"promotional.*offer", r"sale.*ending", r"limited.*time.*offer",
-                    
-                    # Payment plan and sales discussion patterns
-                    r"payment.*plan.*options", r"payment.*plan.*discussion", r"installment.*plan",
-                    r"payment.*arrangement.*offer", r"flexible.*payment.*options", r"payment.*terms.*discussion",
-                    r"financing.*options", r"payment.*schedule.*options", r"payment.*plan.*available",
-                    r"monthly.*payment.*plan", r"extended.*payment.*terms", r"payment.*flexibility"
+                    r"discount.*offer", r"exclusive.*deal", r"prices.*increasing", r"hours.*left", 
+                    r"special.*pricing", r"sale.*ending", r"payment.*plan.*options", r"payment.*plan.*discussion",
+                    r"installment.*plan", r"payment.*arrangement.*offer", r"flexible.*payment.*options",
+                    r"payment.*terms.*discussion", r"financing.*options", r"payment.*schedule.*options",
+                    r"payment.*plan.*available", r"monthly.*payment.*plan", r"extended.*payment.*terms",
+                    r"payment.*flexibility"
                 ],
-                
+
                 "System Alerts": [
                     r"system.*notification", r"automated.*notification", r"system.*alert",
                     r"maintenance.*notification", r"security.*alert"
                 ],
-                
+
                 "Processing Errors": [
                     r"processing.*error", r"failed.*to.*process", r"cannot.*be.*processed",
-                    r"electronic.*invoice.*rejected", r"request.*couldn.*t.*be.*created",
+                    r"electronic.*invoice.*rejected", r"request.*couldn.?t.*be.*created",
                     r"system.*unable.*to.*process", r"mail.*delivery.*failed", r"email.*bounced"
                 ],
-                
+
                 "Business Closure (Info only)": [
-                    r"business.*closure.*information", r"closure.*notification.*only"
+                    r"business.*closure.*information", r"closure.*notification.*only",
+                    r"business.*will.*close", r"store.*will.*close", r"permanently.*closed",
+                    r"company.*shutting.*down", r"closing.*operations"
                 ],
-                
+
                 "General (Thank You)": [
-                    r"thank.*you.*for.*your.*email", r"thanks.*for.*contacting",
-                    r"still.*reviewing", r"currently.*reviewing", r"under.*review",
-                    r"we.*are.*reviewing", r"for.*your.*records"
+                    r"thank.*you.*for.*your.*email", r"thanks.*for.*contacting", r"thank.*you.*for.*reaching.*out",
+                    r"thank.*you.*for.*your.*patience", r"still.*reviewing", r"currently.*reviewing", 
+                    r"under.*review", r"we.*are.*reviewing", r"for.*your.*records"
                 ],
-                
-                # LOW PRIORITY FIX: Enhanced ticket creation patterns (Emails 75, 77)
+
                 "Created": [
-                    r"ticket.*created", r"case.*opened", r"new.*ticket.*opened",
-                    r"support.*request.*created", r"case.*has.*been.*created",
-                    
-                    # Additional ticket creation patterns
-                    r"ticket.*has.*been.*opened", r"new.*case.*created", r"support.*ticket.*opened",
-                    r"case.*number.*assigned", r"ticket.*number.*assigned", r"new.*support.*case",
-                    r"request.*has.*been.*submitted", r"ticket.*submitted.*successfully",
+                    r"ticket.*created", r"case.*opened", r"new.*ticket.*opened", r"support.*request.*created", 
+                    r"case.*has.*been.*created", r"ticket.*has.*been.*opened", r"new.*case.*created", 
+                    r"support.*ticket.*opened", r"case.*number.*assigned", r"ticket.*number.*assigned", 
+                    r"new.*support.*case", r"request.*has.*been.*submitted", r"ticket.*submitted.*successfully",
                     r"case.*opened.*for.*review", r"support.*request.*received"
                 ],
-                
+
                 "Resolved": [
-                    r"ticket.*resolved", r"case.*closed", r"case.*resolved",
-                    r"ticket.*has.*been.*resolved", r"marked.*as.*resolved", r"status.*resolved"
+                    r"ticket.*resolved", r"ticket.*has.*been.*resolved", r"case.*closed", r"case.*resolved", 
+                    r"marked.*as.*resolved", r"status.*resolved", r"ticket.*closed", r"case.*completed",
+                    r"do.*not.*reply", r"your.*feedback.*is.*important", r"survey.*request", r"this.*case.*is.*now.*closed"
                 ],
-                
+
                 "Open": [
                     r"ticket.*open", r"case.*open", r"still.*pending", r"case.*pending"
                 ]
             },
-            
+   
             "Invoices Request": {
                 "Request (No Info)": [
-                    # SPECIFIC invoice requests - EXCLUDE documentation
-                    r"send.*me.*the.*invoice", r"provide.*the.*invoice", r"need.*invoice.*copy",
-                    r"outstanding.*invoices.*owed", r"copies.*of.*any.*invoices",
-                    r"send.*invoices.*that.*are.*due", r"provide.*outstanding.*invoices",
-                    r"send.*me.*the.*invoice(?!.*paid)", r"need.*invoice.*copy(?!.*paid)"
+                    # Requests for invoice only, EXCLUDE requests that mention proof, contract, agreement, paid, etc.
+                    r"send.*me.*the.*invoice(?!.*(paid|contract|agreement|proof|receipt|document|payment))",
+                    r"provide.*the.*invoice(?!.*(paid|contract|agreement|proof|receipt|document|payment))",
+                    r"need.*invoice.*copy(?!.*(paid|contract|agreement|proof|receipt|document|payment))",
+                    r"copies?.*of.*(any.*)?invoices?(?!.*(paid|contract|agreement|proof|receipt|document|payment))",
+                    r"send.*invoices?.*that.*are.*due(?!.*(paid|contract|agreement|proof|receipt|document|payment))",
+                    r"provide.*outstanding.*invoices?(?!.*(paid|contract|agreement|proof|receipt|document|payment))",
+                    r"request.*for.*invoice(?!.*(paid|contract|agreement|proof|receipt|document|payment))",
+                    r"forward.*invoice.*copy(?!.*(paid|contract|agreement|proof|receipt|document|payment))",
+                    r"can.*i.*get.*invoice(?!.*(paid|contract|agreement|proof|receipt|document|payment))",
+                    r"share.*invoice.*copy(?!.*(paid|contract|agreement|proof|receipt|document|payment))",
+                    r"would.*like.*invoice(?!.*(paid|contract|agreement|proof|receipt|document|payment))"
                 ]
             },
 
             "Payments Claim": {
                 "Claims Paid (No Info)": [
-                    # BASIC claims without proof - CLEANED UP
-                    r"already.*paid", r"payment.*was.*made", r"we.*paid", r"bill.*was.*paid",
-                    r"payment.*was.*sent", r"check.*sent", r"payment.*completed",
-                    r"this.*was.*paid", r"account.*paid", r"made.*payment"
+                    # Only "paid" statements WITHOUT proof/attachment language
+                    r"\balready.*paid\b(?!.*(attached|see attached|proof|receipt|confirmation|check enclosed|find attached))",
+                    r"\bpayment.*was.*made\b(?!.*(attached|see attached|proof|receipt|confirmation|check enclosed|find attached))",
+                    r"\bwe.*paid\b(?!.*(attached|see attached|proof|receipt|confirmation|check enclosed|find attached))",
+                    r"\bbill.*was.*paid\b(?!.*(attached|see attached|proof|receipt|confirmation|check enclosed|find attached))",
+                    r"\bpayment.*was.*sent\b(?!.*(attached|see attached|proof|receipt|confirmation|check enclosed|find attached))",
+                    r"\bcheck.*sent\b(?!.*(attached|see attached|proof|receipt|confirmation|check enclosed|find attached))",
+                    r"\bpayment.*completed\b(?!.*(attached|see attached|proof|receipt|confirmation|check enclosed|find attached))",
+                    r"\bthis.*was.*paid\b(?!.*(attached|see attached|proof|receipt|confirmation|check enclosed|find attached))",
+                    r"\baccount.*paid\b(?!.*(attached|see attached|proof|receipt|confirmation|check enclosed|find attached))",
+                    r"\bmade.*payment\b(?!.*(attached|see attached|proof|receipt|confirmation|check enclosed|find attached))"
                 ],
                 
                 "Payment Confirmation": [
-                    # ONLY when providing actual proof/details
-                    r"proof.*of.*payment", r"payment.*confirmation.*attached", r"check.*number.*\d+",
-                    r"eft#.*\d+", r"transaction.*id.*\d+", r"here.*is.*proof.*of.*payment",
-                    r"payment.*receipt.*attached", r"wire.*confirmation.*\d+",
-                    r"paid.*via.*transaction.*number.*\d+", r"batch.*number.*\d+",
-                    r"invoice.*was.*paid.*see.*attachments", r"payment.*proof.*attached",
-                    r"here.*is.*proof.*of.*payment", r"payment.*confirmation.*attached"
+                    # MUST include "attached", "see attached", "proof", "receipt", "confirmation", "check enclosed", etc.
+                    r"proof.*of.*payment",
+                    r"payment.*confirmation.*attached",
+                    r"check.*number.*\d+",
+                    r"eft#.*\d+",
+                    r"transaction.*id.*\d+",
+                    r"here.*is.*proof.*of.*payment",
+                    r"payment.*receipt.*attached",
+                    r"wire.*confirmation.*\d+",
+                    r"paid.*via.*transaction.*number.*\d+",
+                    r"batch.*number.*\d+",
+                    r"invoice.*was.*paid.*see.*attachments",
+                    r"payment.*proof.*attached",
+                    r"check.*enclosed",
+                    r"see.*attached.*(check|proof|receipt|confirmation|document)",
+                    r"find.*attached.*(check|proof|receipt|confirmation|document)",
+                    r"(attached|see attached|find attached|enclosed).*(check|proof|receipt|confirmation|image|document)",
+                    r"attached.*(check|proof|receipt|confirmation|image|document)",
+                    r"here.*is.*(proof|receipt|confirmation|check|image|document).*attached"
                 ],
 
                 "Payment Details Received": [
-                    # FUTURE payments and processing info
-                    r"payment.*will.*be.*sent", r"payment.*being.*processed", r"check.*will.*be.*mailed",
-                    r"payment.*scheduled", r"in.*process.*of.*issuing.*payment",
-                    r"invoices.*being.*processed.*for.*payment", r"will.*pay.*this.*online",
-                    r"working.*on.*payment", r"need.*time.*to.*pay"
+                    # Future/pending payment info only
+                    r"payment.*will.*be.*sent",
+                    r"payment.*being.*processed",
+                    r"check.*will.*be.*mailed",
+                    r"payment.*scheduled",
+                    r"in.*process.*of.*issuing.*payment",
+                    r"invoices.*being.*processed.*for.*payment",
+                    r"will.*pay.*this.*online",
+                    r"working.*on.*payment",
+                    r"need.*time.*to.*pay"
                 ]
             },
-            
+
             "Auto Reply (with/without info)": {
                 "With Alternate Contact": [
-                    # ONLY genuine OOO with contact - STRICT
-                    r"out.*of.*office.*contact.*\d+", r"emergency.*contact.*\d+",
-                    r"urgent.*matters.*contact.*\d+", r"immediate.*assistance.*contact.*\d+"
+                    # Any OOO/autoreply that gives a contact (phone/email/name)
+                    r"out.*of.*office.*(contact|reach|please.*email|call|reach me at)",
+                    r"for.*immediate.*assistance.*(contact|email|call)",
+                    r"urgent.*matters.*(contact|email|call)",
+                    r"in.*my.*absence.*(contact|email|call)",
+                    r"please.*contact.*(colleague|someone else|the following|alternate|alternate contact)",
+                    r"if.*urgent.*(contact|email|call)",
+                    r"for.*support.*(contact|email|call)"
                 ],
-                
-                # LOW PRIORITY FIX: Enhanced Return Date patterns (Emails 11, 38, 52, 53, 66, 70, 95, 105)
+
                 "Return Date Specified": [
-                    r"out.*of.*office.*until.*\d+", r"return.*on.*\d+", r"back.*on.*\d+",
-                    r"returning.*\d+", r"will.*be.*back.*\d+",
-                    
-                    # Enhanced return date patterns
-                    r"return.*to.*office.*on", r"back.*in.*office.*on", r"returning.*to.*work.*on",
-                    r"will.*return.*on", r"back.*from.*vacation.*on", r"return.*date.*is",
-                    r"expected.*return.*date", r"returning.*from.*leave.*on", r"back.*on.*\w+day",
-                    r"return.*on.*\w+.*\d+", r"back.*\w+.*\d+", r"returning.*\w+.*\d+",
-                    r"out.*until.*\w+", r"away.*until.*\w+", r"return.*after.*\w+",
-                    r"back.*after.*\w+", r"returning.*after.*the.*holiday", r"back.*monday",
-                    r"return.*monday", r"back.*next.*week", r"return.*next.*week"
+                    # OOO with a specific date of return
+                    r"out.*of.*office.*until.*\d{1,2}[\-/]\d{1,2}",  # until 15/06 or 06-15
+                    r"out.*of.*office.*until.*(monday|tuesday|wednesday|thursday|friday|saturday|sunday)",
+                    r"return.*(on|by|after|until|to work on).*[\w\s,]+(\d{1,2}[\-/]\d{1,2}|\d{4})",
+                    r"will.*be.*back.*on.*\d{1,2}[\-/]\d{1,2}", 
+                    r"expected.*return.*(date|on).*[\w\s,]+",
+                    r"back.*(on|by|in).*[\w\s,]+", 
+                    r"returning.*(on|by|after|in).*[\w\s,]+",
+                    r"will.*return.*(on|by|after|in).*[\w\s,]+",
+                    r"away.*until.*(monday|tuesday|wednesday|thursday|friday|saturday|sunday)",
+                    r"on.*vacation.*until.*[\w\s,]+",
+                    r"back.*after.*the.*holiday",
+                    r"return.*next.*week",
+                    r"back.*next.*week",
+                    r"out.*until.*(monday|tuesday|wednesday|thursday|friday|saturday|sunday)",
                 ],
-                
+
                 "No Info/Autoreply": [
-                    r"out.*of.*office", r"automatic.*reply", r"auto-reply", r"currently.*out",
-                    r"away.*from.*desk", r"on.*vacation", r"limited.*access.*to.*email",
-                    r"do.*not.*reply", r"automated.*response"
+                    # Generic OOO/auto-reply without alternate contact or date
+                    r"out.*of.*office", r"currently.*out", r"on.*vacation", r"away.*from.*desk",
+                    r"automatic.*reply", r"auto-?reply", r"limited.*access.*to.*email",
+                    r"automated.*response", r"this.*is.*an.*automatic.*reply", r"i.*am.*currently.*away",
+                    r"do.*not.*reply", r"thank.*you.*for.*your.*email"
                 ],
-                
+
                 "Survey": [
                     r"\bsurvey\b", r"feedback.*request", r"rate.*our.*service",
-                    r"customer.*satisfaction", r"take.*our.*survey"
+                    r"customer.*satisfaction", r"take.*our.*survey",
+                    r"please.*provide.*feedback", r"how.*did.*we.*do", r"your.*feedback.*is.*important",
+                    r"survey.*link", r"complete.*survey"
                 ],
-                
+
                 "Redirects/Updates (property changes)": [
                     r"no.*longer.*with", r"no.*longer.*employed", r"contact.*changed",
-                    r"property.*manager.*changed", r"department.*changed"
+                    r"property.*manager.*changed", r"department.*changed", r"my.*email.*has.*changed",
+                    r"please.*update.*your.*records", r"forward.*future.*emails.*to"
                 ]
             }
         }

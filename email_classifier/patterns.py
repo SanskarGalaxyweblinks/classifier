@@ -29,179 +29,221 @@ class PatternMatcher:
         self.logger.info("✅ Simplified Pattern Matcher initialized")
 
     def _initialize_patterns(self) -> None:
-        """Initialize core patterns - simplified for essential business cases."""
+        """Initialize essential patterns with proper word boundaries - core business cases only."""
         
         self.patterns = {
             "Manual Review": {
                 "Partial/Disputed Payment": [
-                    # Core dispute patterns
+                    # Core dispute patterns with word boundaries
                     r"\bdispute\b",
+                    r"\bdisputing\b",
                     r"\bowe\b.*\bnothing\b",
+                    r"\bowe\b.*\bthem\b.*\bnothing\b",
                     r"\bcontested\b",
                     r"\bscam\b",
                     r"\bfdcpa\b",
                     r"\bcease\b.*\band\b.*\bdesist\b",
-                    r"\bdo\b.*\bnot\b.*\backnowledge\b"
+                    r"\bdo\b.*\bnot\b.*\backnowledge\b",
+                    r"\bdisputing\b.*\bwith\b.*\binsurance\b",
+                    r"\bbilling\b.*\bis\b.*\bincorrect\b",
+                    r"\bnot\b.*\bour\b.*\bresponsibility\b"
                 ],
 
                 "Invoice Receipt": [
-                    # Providing invoice proof
+                    # Providing invoice proof with word boundaries
                     r"\binvoice\b.*\battached\b",
                     r"\bproof\b.*\bof\b.*\binvoice\b",
-                    r"\binvoice\b.*\bcopy\b.*\battached\b"
+                    r"\binvoice\b.*\bcopy\b.*\battached\b",
+                    r"\binvoice\b.*\breceipt\b.*\battached\b"
                 ],
 
                 "Closure Notification": [
-                    # Business closure
+                    # Business closure with word boundaries
                     r"\bbusiness\b.*\bclosed\b",
                     r"\bfiled\b.*\bbankruptcy\b",
-                    r"\bout\b.*\bof\b.*\bbusiness\b"
+                    r"\bout\b.*\bof\b.*\bbusiness\b",
+                    r"\bceased\b.*\boperations\b"
                 ],
 
                 "External Submission": [
-                    # Submission failures
+                    # Submission failures with word boundaries
                     r"\bsubmission\b.*\bfailed\b",
                     r"\bimport\b.*\bfailed\b",
-                    r"\bprocessing\b.*\bfailed\b"
+                    r"\bprocessing\b.*\bfailed\b",
+                    r"\binvoice\b.*\bsubmission\b.*\bfailed\b"
                 ],
 
                 "Invoice Errors (format mismatch)": [
-                    # Format errors
+                    # Format errors with word boundaries
                     r"\bformat\b.*\berror\b",
                     r"\bmissing\b.*\bfield\b",
-                    r"\binvalid\b.*\bformat\b"
+                    r"\binvalid\b.*\bformat\b",
+                    r"\bformat\b.*\bmismatch\b"
                 ],
 
                 "Inquiry/Redirection": [
-                    # Redirections and questions
+                    # Redirections and questions with word boundaries
                     r"\bplease\b.*\badvise\b",
                     r"\bneed\b.*\bguidance\b",
                     r"\bcontact\b.*\binstead\b",
-                    r"\bwhat\b.*\bvendor\b"
+                    r"\bwhat\b.*\bvendor\b",
+                    r"\breached\b.*\bout\b.*\bto\b.*\bowner\b",
+                    r"\bwhat\b.*\bis\b.*\bthe\b.*\bservicing\b.*\baddress\b"
                 ],
 
                 "Complex Queries": [
-                    # Legal and complex matters
+                    # Legal and complex matters with word boundaries
                     r"\bsettlement\b",
                     r"\battorney\b",
-                    r"\blegal\b"
+                    r"\blegal\b",
+                    r"\bminimum\b.*\bsettlement\b.*\bamount\b",
+                    r"\bcomplex\b.*\bbusiness\b.*\binstructions\b"
                 ]
             },
- 
+    
             "No Reply (with/without info)": {
                 "Sales/Offers": [
-                    # Marketing content
+                    # Marketing content with word boundaries
                     r"\bspecial\b.*\boffer\b",
                     r"\blimited\b.*\btime\b",
                     r"\bpromotional\b",
                     r"\bdiscount\b",
-                    r"\bsale\b.*\bending\b"
+                    r"\bsale\b.*\bending\b",
+                    r"\bkiller\b.*\bsales\b.*\bsamples\b",
+                    r"\bmake\b.*\bsamples\b.*\bthat\b.*\bsell\b",
+                    r"\bbusiness\b.*\bguide\b"
                 ],
 
                 "System Alerts": [
-                    # System notifications
+                    # System notifications with word boundaries
                     r"\bsystem\b.*\bnotification\b",
                     r"\bpassword\b.*\bexpires\b",
-                    r"\bmaintenance\b"
+                    r"\bmaintenance\b",
+                    r"\bpassword\b.*\bfor\b.*\baccount\b.*\bexpires\b"
                 ],
 
                 "Processing Errors": [
-                    # System errors
+                    # System errors with word boundaries
                     r"\bprocessing\b.*\berror\b",
                     r"\bfailed\b.*\bto\b.*\bprocess\b",
                     r"\bdelivery\b.*\bfailed\b",
-                    r"\binvoice\b.*\brejected\b"
+                    r"\binvoice\b.*\brejected\b",
+                    r"\binvoices\b.*\bwill\b.*\bnot\b.*\bbe\b.*\bprocessed\b"
                 ],
 
                 "General (Thank You)": [
-                    # Acknowledgments
+                    # Acknowledgments with word boundaries
                     r"\bthank\b.*\byou\b",
                     r"\backnowledgment\b",
-                    r"\breceived\b"
+                    r"\breceived\b",
+                    r"\bthank\b.*\byou\b.*\bfor\b.*\breaching\b.*\bout\b",
+                    r"\bclosing\b.*\bthis\b.*\brequest\b",
+                    r"\bno\b.*\blonger\b.*\bmanage\b"
                 ],
 
                 "Created": [
-                    # Ticket creation
+                    # Ticket creation with word boundaries
                     r"\bticket\b.*\bcreated\b",
                     r"\bcase\b.*\bopened\b",
-                    r"\brequest\b.*\bcreated\b"
+                    r"\brequest\b.*\bcreated\b",
+                    r"\bquery\b.*\breceived\b.*\bticket\b"
                 ],
 
                 "Resolved": [
-                    # Case resolution
+                    # Case resolution with word boundaries
                     r"\bresolved\b",
                     r"\bclosed\b",
                     r"\bcompleted\b",
-                    r"\bcase\b.*\bhas\b.*\bbeen\b.*\bresolved\b"
+                    r"\bcase\b.*\bhas\b.*\bbeen\b.*\bresolved\b",
+                    r"\bthis\b.*\bhas\b.*\bbeen\b.*\bresolved\b",
+                    r"\baccount\b.*\bwas\b.*\bpaid\b.*\band\b.*\bclosed\b"
                 ],
 
                 "Open": [
-                    # Open status
+                    # Open status with word boundaries
                     r"\bpending\b",
                     r"\bin\b.*\bprogress\b",
                     r"\bopen\b"
                 ]
             },
-   
+    
             "Invoices Request": {
                 "Request (No Info)": [
-                    # Core invoice requests
+                    # Core invoice requests with word boundaries
                     r"\bprovide\b.*\binvoices?\b.*\bcopies\b",
                     r"\bsend\b.*\bme\b.*\bthe\b.*\binvoices?\b",
                     r"\bneed\b.*\binvoices?\b.*\bcopy\b",
                     r"\bshare\b.*\binvoices?\b",
                     r"\bforward\b.*\binvoices?\b",
-                    r"\bprovide\b.*\boutstanding\b.*\binvoices?\b"
+                    r"\bprovide\b.*\boutstanding\b.*\binvoices?\b",
+                    r"\bshare\b.*\bthe\b.*\bpast\b.*\bdue\b.*\binvoice\b.*\bcopy\b",
+                    r"\bsend\b.*\bme\b.*\bthe\b.*\brelevant\b.*\binvoices\b",
+                    r"\bsend\b.*\bcopies\b.*\bof\b.*\boutstanding\b.*\binvoices\b",
+                    r"\bcan\b.*\byou\b.*\bsed\b.*\bme\b.*\bthe\b.*\binvoices\b",
+                    r"\bneed\b.*\ba\b.*\bbreakdown\b.*\bby\b.*\binvoice\b"
                 ]
             },
 
             "Payments Claim": {
                 "Claims Paid (No Info)": [
-                    # Payment claims without proof
+                    # Payment claims without proof with word boundaries
                     r"\balready\b.*\bpaid\b",
                     r"\bpayment\b.*\bwas\b.*\bmade\b",
                     r"\bwe\b.*\bpaid\b",
                     r"\bthis\b.*\bwas\b.*\bpaid\b",
-                    r"\bmade\b.*\bthe\b.*\bpayment\b"
+                    r"\bmade\b.*\bthe\b.*\bpayment\b",
+                    r"\baccount\b.*\bwas\b.*\bpaid\b",
+                    r"\bthis\b.*\baccount\b.*\bwas\b.*\bpaid\b",
+                    r"\bhas\b.*\bbeen\b.*\bpaid\b.*\bvia\b.*\bcredit\b.*\bcard\b",
+                    r"\bpaid\b.*\bfor\b.*\beverything\b.*\bup\b.*\bfront\b",
+                    r"\bhas\b.*\bbeen\b.*\bpaid\b.*\bdirectly\b"
                 ],
                 
                 "Payment Confirmation": [
-                    # Payment with proof
+                    # Payment with proof with word boundaries
                     r"\bproof\b.*\bof\b.*\bpayment\b",
                     r"\bpayment\b.*\battached\b",
                     r"\breceipt\b.*\battached\b",
                     r"\bcheck\b.*\bnumber\b",
                     r"\btransaction\b.*\bid\b",
-                    r"\bpaid\b.*\bsee\b.*\battachments\b"
+                    r"\bpaid\b.*\bsee\b.*\battachments\b",
+                    r"\bpayment\b.*\breceipt\b.*\bis\b.*\battached\b",
+                    r"\bsent\b.*\bproof\b.*\bseveral\b.*\btimes\b",
+                    r"\blast\b.*\b4\b.*\bdigits\b.*\bof\b.*\bach\b.*\bpayment\b.*\bid\b",
+                    r"\bacopy\b.*\bof\b.*\bthe\b.*\bpayment\b.*\breceipt\b.*\bis\b.*\battached\b"
                 ],
 
                 "Payment Details Received": [
-                    # Future/pending payments
+                    # Future/pending payments with word boundaries
                     r"\bpayment\b.*\bwill\b.*\bbe\b.*\bsent\b",
                     r"\bpayment\b.*\bbeing\b.*\bprocessed\b",
                     r"\bworking\b.*\bon\b.*\bpayment\b",
-                    r"\bpayment\b.*\bis\b.*\bawaiting\b"
+                    r"\bpayment\b.*\bis\b.*\bawaiting\b",
+                    r"\bpayment\b.*\bis\b.*\bawaiting\b.*\binformation\b"
                 ]
             },
 
             "Auto Reply (with/without info)": {
                 "With Alternate Contact": [
-                    # OOO with contact info
+                    # OOO with contact info with word boundaries
                     r"\bout\b.*\bof\b.*\boffice\b.*\bcontact\b",
                     r"\balternate\b.*\bcontact\b",
-                    r"\bemergency\b.*\bcontact\b"
+                    r"\bemergency\b.*\bcontact\b",
+                    r"\bcontact\b.*\bme\b.*\bat\b"
                 ],
 
                 "Return Date Specified": [
-                    # OOO with return date
+                    # OOO with return date with word boundaries
                     r"\breturn\b.*\bon\b",
                     r"\bback\b.*\bon\b",
                     r"\bout\b.*\buntil\b",
-                    r"\breturning\b.*\bon\b"
+                    r"\breturning\b.*\bon\b",
+                    r"\bwill\b.*\bbe\b.*\bout\b.*\bof\b.*\bthe\b.*\boffice\b.*\bmonday\b",
+                    r"\brespond\b.*\bto\b.*\byour\b.*\bemails\b.*\bupon\b.*\bmy\b.*\breturn\b"
                 ],
 
                 "No Info/Autoreply": [
-                    # Generic auto-replies
+                    # Generic auto-replies with word boundaries
                     r"\bout\b.*\bof\b.*\boffice\b",
                     r"\bautomatic\b.*\breply\b",
                     r"\bauto-?reply\b",
@@ -209,18 +251,21 @@ class PatternMatcher:
                 ],
 
                 "Survey": [
-                    # Surveys and feedback
+                    # Surveys and feedback with word boundaries
                     r"\bsurvey\b",
                     r"\bfeedback\b",
                     r"\brate\b.*\bour\b.*\bservice\b"
                 ],
 
                 "Redirects/Updates (property changes)": [
-                    # Contact changes
+                    # Contact changes with word boundaries
                     r"\bno\b.*\blonger\b.*\bemployed\b",
                     r"\bcontact\b.*\bchanged\b",
                     r"\bquit\b.*\bcontacting\b",
-                    r"\bproperty\b.*\bmanager\b.*\bchanged\b"
+                    r"\bproperty\b.*\bmanager\b.*\bchanged\b",
+                    r"\bplease\b.*\bquit\b.*\bcontacting\b.*\bme\b",
+                    r"\bdo\b.*\bnot\b.*\bcontact\b.*\bme\b.*\bfurther\b",
+                    r"\brefrain\b.*\bfrom\b.*\bcontacting\b"
                 ]
             }
         }

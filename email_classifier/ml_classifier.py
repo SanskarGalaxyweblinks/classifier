@@ -1,20 +1,42 @@
 """
-Updated ML Classifier - Clean, Aligned with Hierarchy, Quality-Focused
+High-Quality ML Classifier - Aligned with Exact Hierarchy, No Thread Logic
+Focus on accuracy and performance, minimal safety overhead
 """
 
 import logging
 import torch
 from transformers import pipeline
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 import re
 
 logger = logging.getLogger(__name__)
 
+# Configuration Constants
+CONFIDENCE_THRESHOLDS = {
+    'high': 0.85,
+    'medium': 0.70,
+    'low': 0.55,
+    'fallback': 0.45
+}
+
+MAX_TEXT_LENGTH = 512  # Tokens for transformer models
+MIN_TEXT_LENGTH = 10
+
 class MLClassifier:
+    """
+    Production-grade ML Classifier for email categorization.
+    Aligned with exact hierarchy structure, optimized for accuracy.
+    """
+    
     def __init__(self):
         self.logger = logging.getLogger(__name__)
-        
-        # Initialize BART model with error handling
+        self._initialize_model()
+        self._initialize_categories()
+        self._initialize_patterns()
+        self.logger.info("✅ ML Classifier initialized - No thread logic")
+
+    def _initialize_model(self) -> None:
+        """Initialize BART model with fallback handling."""
         try:
             self.classifier = pipeline(
                 "zero-shot-classification",
@@ -23,455 +45,456 @@ class MLClassifier:
             )
             self.logger.info("✅ BART model loaded successfully")
         except Exception as e:
-            self.logger.error(f"❌ Failed to load BART model: {e}")
+            self.logger.warning(f"BART model failed to load: {e}")
             self.classifier = None
-        
-        # Main categories - EXACT hierarchy match
+
+    def _initialize_categories(self) -> None:
+        """Initialize main categories with clear descriptions."""
         self.main_categories = {
-            "Manual Review": "Complex issues requiring human attention including disputes, invoice receipts, business closures, and payment confirmations",
-            "No Reply (with/without info)": "System notifications, alerts, ticket updates, sales offers, or informational messages requiring no response",
-            "Invoices Request": "Requests for invoice copies or documentation without providing details",
-            "Payments Claim": "Claims about payments made, payment confirmations, or payment details requiring verification",
-            "Auto Reply (with/without info)": "Automatic responses including out-of-office messages, confirmations, surveys, or system-generated replies",
-            "Uncategorized": "Emails that don't clearly fit any specific business category"
+            "Manual Review": "Complex business issues requiring human attention including disputes, invoice documentation, business closures, and payment verifications",
+            "No Reply (with/without info)": "System notifications, alerts, ticket updates, sales offers, processing errors, or informational messages requiring no response",
+            "Invoices Request": "Requests for invoice copies or documentation without providing payment details",
+            "Payments Claim": "Claims about payments made, payment confirmations with proof, or payment processing details",
+            "Auto Reply (with/without info)": "Automatic responses including out-of-office messages, surveys, property updates, or system-generated replies",
+            "Uncategorized": "Emails that don't clearly match any specific business category"
         }
+
+    def _initialize_patterns(self) -> None:
+        """Initialize keyword patterns aligned with exact hierarchy."""
         
-        # ENHANCED keyword classification - FIXED with missing patterns from analysis
-        self.category_keywords = {
-            "Manual Review": [
-                # ENHANCED Disputes & Payments - ADDED missing patterns from Email 1
-                "dispute", "contested", "disagreement", "partial payment", "challenge payment", "refuse payment",
-                "owe nothing", "owe them nothing", "consider this a scam", "looks like a scam", 
-                "is this legitimate", "verify this debt", "do not acknowledge", "formally disputing",
-                "dispute this debt", "billing is incorrect", "not our responsibility", "cease and desist",
-                "fdcpa", "not properly billed", "wrong entity", "debt is disputed",
-                
-                # Invoice Receipt (proof provided)
-                "invoice receipt", "proof of invoice", "invoice copy attached", "invoice documentation", "invoice attached",
-                "invoice receipt attached", "copy of invoice attached for your records",
-                
-                # Business Closure
-                "business closed", "company closed", "out of business", "ceased operations", "closure notification",
-                "filed bankruptcy", "bankruptcy protection", "chapter 7", "chapter 11",
-                
-                # External Submission (invoice issues)
-                "invoice issue", "invoice problem", "invoice error", "import failed", "submission failed", "unable to import",
-                "documents not processed", "submission unsuccessful", "error importing invoice",
-                
-                # Invoice Format Errors
-                "missing field", "format mismatch", "incomplete invoice", "invoice format error", "required field missing",
-                "missing required field", "field missing from invoice",
-                
-                # Inquiry/Redirection
-                "redirect", "forward", "contact instead", "reach out to", "please review", "guidance needed",
-                "please check with", "insufficient data to research", "need guidance", "please advise",
-                "what documentation needed", "where to send payment",
-                
-                # Complex Queries
-                "human review", "complex", "multiple issues", "requires attention", "manual review",
-                "settle for", "settlement offer", "negotiate payment", "attorney", "law firm", "legal counsel"
-            ],
-            "No Reply (with/without info)": [
-                # ENHANCED Sales/Offers - ADDED missing patterns from Email 119
-                "sales offer", "promotion", "special offer", "limited time offer", "discount", "marketing",
-                "prices increasing", "price increase", "limited time", "hours left", "sale ending",
-                "special pricing", "promotional offer", "exclusive deal", "promotional pricing", "discount offer",
-                
-                # System Alerts & Processing Errors
-                "processing error", "failed to process", "system alert", "delivery failed", "import error",
-                "system notification", "automated notification", "security alert", "maintenance notification",
-                "cannot be processed", "electronic invoice rejected", "request couldn't be created",
-                "system unable to process", "mail delivery failed", "email bounced",
-                
-                # Business Closure (Info only)
-                "business closure information", "closure notification only", "informational closure",
-                
-                # General Thank You
-                "thank you for", "we received", "acknowledgment", "confirmation received", "received your message",
-                "thank you for your email", "thanks for contacting", "still reviewing", "currently reviewing",
-                "under review", "we are reviewing", "for your records",
-                
-                # Tickets/Cases
-                "ticket created", "case opened", "ticket resolved", "case closed", "case resolved", "ticket status",
-                "new ticket opened", "support request created", "case has been created",
-                "ticket has been resolved", "marked as resolved", "status resolved"
-            ],
-            "Invoices Request": [
-                "invoice request", "need invoice", "send invoice", "invoice copy", "provide invoice", 
-                "share invoice", "outstanding invoices", "copies of invoices", "invoice documentation",
-                # ENHANCED - but excluding proof scenarios
-                "send me the invoice", "provide the invoice", "need invoice copy", "outstanding invoices owed",
-                "copies of any invoices", "send invoices that are due", "provide outstanding invoices"
-            ],
-            "Payments Claim": [
-                # ENHANCED Claims Paid (No Info)
-                "payment made", "already paid", "check sent", "payment completed", "we paid", "payment processed",
-                "payment was made", "bill was paid", "payment was sent", "this was paid", "account paid",
-                "made payment", "been paid",
-                
-                # ENHANCED Payment Confirmation (with proof) - ADDED patterns from Email 4
-                "payment confirmation", "proof of payment", "payment receipt", "eft#", "check number",
-                "invoice was paid see attachments", "payment confirmation attached", "transaction id",
-                "here is proof of payment", "payment receipt attached", "wire confirmation", "batch number",
-                "paid via transaction number",
-                
-                # Payment Details Received
-                "payment details", "remittance info", "payment breakdown", "payment timeline", "payment scheduled",
-                "payment will be sent", "payment being processed", "check will be mailed",
-                "in process of issuing payment", "invoices being processed for payment", "will pay this online",
-                "working on payment", "need time to pay"
-            ],
-            "Auto Reply (with/without info)": [
-                # Out of Office
-                "out of office", "automatic reply", "auto-reply", "currently out", "away from desk", 
-                "on vacation", "return date", "alternate contact", "limited access to email",
-                "do not reply", "automated response", "out of office until", "will be back", "returning on",
-                "emergency contact number", "urgent matters contact", "immediate assistance contact",
-                
-                # ENHANCED Miscellaneous - ADDED survey patterns from Email 2
-                "survey", "feedback", "property manager", "contact changed", "no longer with", "redirects",
-                "feedback request", "rate our service", "customer satisfaction", "take our survey",
-                "your feedback is important", "please rate", "questionnaire",
-                "no longer employed", "department changed", "property manager changed"
-            ]
+        # Primary category keywords with weighted scoring
+        self.category_patterns = {
+            "Manual Review": {
+                'high_weight': [
+                    # Disputes & Payments
+                    "dispute payment", "contested payment", "formally disputing", "owe nothing", 
+                    "consider this a scam", "do not acknowledge", "cease and desist", "fdcpa",
+                    "debt validation", "billing is incorrect", "not our responsibility",
+                    
+                    # Invoice Updates (providing proof)
+                    "invoice receipt attached", "proof of invoice", "copy of invoice attached",
+                    "invoice documentation attached", "here is the invoice copy",
+                    
+                    # Business Closure
+                    "business closed", "filed bankruptcy", "chapter 7", "chapter 11",
+                    "ceased operations", "out of business",
+                    
+                    # Complex business processes
+                    "settlement arrangement", "legal settlement", "attorney involvement",
+                    "complex business instructions", "routing instructions"
+                ],
+                'medium_weight': [
+                    "manual review", "human attention", "requires verification", "complex situation",
+                    "invoice issue", "submission failed", "format mismatch", "missing field",
+                    "guidance needed", "insufficient data", "redirect to", "legal communication"
+                ]
+            },
+            
+            "No Reply (with/without info)": {
+                'high_weight': [
+                    # Sales/Offers
+                    "special offer", "limited time offer", "prices increasing", "promotional offer",
+                    "discount offer", "exclusive deal", "sale ending", "payment plan options",
+                    
+                    # System/Processing
+                    "processing error", "system notification", "delivery failed", "cannot be processed",
+                    "electronic invoice rejected", "mail delivery failed",
+                    
+                    # Tickets/Cases
+                    "ticket created", "case opened", "ticket resolved", "case closed",
+                    "support request created", "marked as resolved",
+                    
+                    # General notifications
+                    "thank you for your email", "still reviewing", "for your records"
+                ],
+                'medium_weight': [
+                    "notification", "system alert", "automated message", "no reply required",
+                    "informational only", "acknowledgment", "confirmation received"
+                ]
+            },
+            
+            "Invoices Request": {
+                'high_weight': [
+                    "send me the invoice", "need invoice copy", "provide outstanding invoices",
+                    "copies of invoices", "invoice request", "share invoice copy",
+                    "forward invoice", "outstanding invoices owed"
+                ],
+                'medium_weight': [
+                    "need invoice", "send invoice", "provide invoice", "invoice documentation"
+                ]
+            },
+            
+            "Payments Claim": {
+                'high_weight': [
+                    # Claims with proof
+                    "payment confirmation attached", "proof of payment", "check number",
+                    "transaction id", "eft#", "wire confirmation", "batch number",
+                    "invoice was paid see attachments", "here is proof of payment",
+                    
+                    # Claims without proof  
+                    "already paid", "payment was made", "check was sent", "we paid",
+                    "payment completed", "this was paid", "account paid",
+                    
+                    # Payment details
+                    "payment being processed", "check will be mailed", "payment scheduled",
+                    "will pay this online", "working on payment"
+                ],
+                'medium_weight': [
+                    "payment made", "bill paid", "payment sent", "remittance info"
+                ]
+            },
+            
+            "Auto Reply (with/without info)": {
+                'high_weight': [
+                    # Out of office
+                    "out of office", "automatic reply", "auto-reply", "away from desk",
+                    "on vacation", "return date", "returning on", "back on",
+                    "alternate contact", "emergency contact",
+                    
+                    # Surveys and redirects
+                    "survey", "feedback request", "rate our service", "customer satisfaction",
+                    "property manager changed", "no longer employed", "contact changed"
+                ],
+                'medium_weight': [
+                    "automated response", "currently out", "limited access", "do not reply"
+                ]
+            }
         }
-        
-        # ENHANCED subcategory mapping - FIXED with missing patterns
-        self.subcategories = {
+
+        # Subcategory patterns for precise classification
+        self.subcategory_patterns = {
             "Manual Review": {
                 "Partial/Disputed Payment": [
-                    "dispute", "contested", "disagreement", "refuse payment", "partial payment",
-                    # ADDED: Missing dispute patterns from Email 1
-                    "owe nothing", "owe them nothing", "consider this a scam", "looks like a scam",
-                    "is this legitimate", "verify this debt", "do not acknowledge", "formally disputing",
-                    "dispute this debt", "billing is incorrect", "not our responsibility", "cease and desist"
+                    "dispute", "contested", "owe nothing", "scam", "fdcpa", "cease and desist",
+                    "do not acknowledge", "billing incorrect", "debt validation"
                 ],
                 "Invoice Receipt": [
-                    "invoice receipt", "proof of invoice", "invoice attached", "invoice copy attached",
-                    "invoice receipt attached", "copy of invoice attached for your records"
+                    "invoice receipt attached", "proof of invoice", "invoice copy attached",
+                    "invoice documentation", "here is the invoice"
                 ],
                 "Closure Notification": [
-                    "business closed", "company closed", "out of business", "ceased operations",
-                    "filed bankruptcy", "bankruptcy protection", "chapter 7", "chapter 11"
+                    "business closed", "company closed", "ceased operations", "filed bankruptcy"
                 ],
                 "Closure + Payment Due": [
-                    "closed", "closure", "bankruptcy", "payment", "due", "outstanding",
-                    "business closed outstanding", "closure with outstanding payment"
+                    "closed outstanding payment", "bankruptcy payment due", "closure with payment"
                 ],
                 "External Submission": [
-                    "invoice issue", "invoice problem", "import failed", "submission failed",
-                    "documents not processed", "submission unsuccessful", "error importing invoice",
-                    "invoice submission failed"
+                    "invoice submission failed", "import failed", "documents not processed"
                 ],
                 "Invoice Errors (format mismatch)": [
-                    "missing field", "format mismatch", "incomplete invoice", "format error",
-                    "missing required field", "invoice format error", "field missing from invoice"
+                    "missing field", "format mismatch", "incomplete invoice", "format error"
                 ],
                 "Inquiry/Redirection": [
-                    "redirect", "forward", "contact instead", "guidance needed", "please review",
-                    "reach out to", "please check with", "insufficient data to research",
-                    "need guidance", "please advise", "what documentation needed"
+                    "guidance needed", "redirect", "contact instead", "insufficient data"
                 ],
                 "Complex Queries": [
-                    "complex", "multiple issues", "human review", "requires attention",
-                    "settle for", "settlement offer", "negotiate payment", "attorney", "legal counsel"
+                    "settlement", "legal", "attorney", "complex", "multiple issues"
                 ]
             },
+            
             "No Reply (with/without info)": {
                 "Sales/Offers": [
-                    "sales offer", "promotion", "discount", "special offer",
-                    # ADDED: Missing sales patterns from Email 119
-                    "prices increasing", "price increase", "limited time offer", "hours left",
-                    "sale ending", "special pricing", "promotional offer", "exclusive deal"
+                    "special offer", "promotion", "discount", "price increase", "limited time"
                 ],
                 "System Alerts": [
-                    "system alert", "notification", "alert", "system notification",
-                    "automated notification", "security alert", "maintenance notification"
+                    "system notification", "alert", "maintenance notification"
                 ],
                 "Processing Errors": [
-                    "processing error", "failed to process", "delivery failed", "import error",
-                    "cannot be processed", "electronic invoice rejected", "request couldn't be created",
-                    "system unable to process", "mail delivery failed", "email bounced"
+                    "processing error", "failed to process", "delivery failed", "rejected"
                 ],
                 "Business Closure (Info only)": [
-                    "closure information", "business closure info", "closure notification only"
+                    "closure information", "business closure info"
                 ],
                 "General (Thank You)": [
-                    "thank you", "received", "acknowledgment", "thank you for your email",
-                    "thanks for contacting", "still reviewing", "currently reviewing", "under review"
+                    "thank you", "received", "acknowledgment", "for your records"
                 ],
                 "Created": [
-                    "ticket created", "case opened", "case created", "new ticket opened",
-                    "support request created", "case has been created"
+                    "ticket created", "case opened", "new ticket", "support request created"
                 ],
                 "Resolved": [
-                    "resolved", "closed", "completed", "solved", "ticket has been resolved",
-                    "marked as resolved", "status resolved"
+                    "resolved", "closed", "completed", "marked as resolved"
                 ],
                 "Open": [
-                    "open", "pending", "in progress", "still pending", "case pending"
+                    "pending", "in progress", "still open"
                 ]
             },
+            
             "Invoices Request": {
                 "Request (No Info)": [
-                    "invoice request", "need invoice", "send invoice", "provide invoice",
-                    "send me the invoice", "provide the invoice", "need invoice copy",
-                    "outstanding invoices owed", "copies of any invoices"
+                    "send invoice", "need invoice", "provide invoice", "invoice copy"
                 ]
             },
+            
             "Payments Claim": {
                 "Claims Paid (No Info)": [
-                    "already paid", "payment made", "check sent", "we paid",
-                    "payment was made", "bill was paid", "payment was sent", "this was paid",
-                    "account paid", "made payment", "been paid"
+                    "already paid", "payment made", "check sent", "we paid"
                 ],
                 "Payment Details Received": [
-                    "payment details", "payment timeline", "payment scheduled",
-                    "payment will be sent", "payment being processed", "check will be mailed",
-                    "in process of issuing payment", "will pay this online", "need time to pay"
+                    "payment scheduled", "will be sent", "being processed", "working on payment"
                 ],
                 "Payment Confirmation": [
-                    "payment confirmation", "proof of payment", "payment receipt", "eft#",
-                    # ADDED: Enhanced proof patterns from Email 4
-                    "invoice was paid see attachments", "payment confirmation attached",
-                    "check number", "transaction id", "here is proof of payment",
-                    "wire confirmation", "batch number", "paid via transaction number"
+                    "proof of payment", "payment confirmation", "check number", "transaction id"
                 ]
             },
+            
             "Auto Reply (with/without info)": {
                 "With Alternate Contact": [
-                    "alternate contact", "contact information", "emergency contact",
-                    "emergency contact number", "urgent matters contact", "immediate assistance contact"
+                    "alternate contact", "emergency contact", "contact me at"
                 ],
                 "No Info/Autoreply": [
-                    "out of office", "automatic reply", "auto-reply", "currently out",
-                    "away from desk", "on vacation", "limited access to email", "do not reply"
+                    "out of office", "automatic reply", "away from desk"
                 ],
                 "Return Date Specified": [
-                    "return date", "back on", "until", "returning", "out of office until",
-                    "will be back", "returning on"
+                    "return date", "back on", "returning", "until"
                 ],
                 "Survey": [
-                    "survey", "feedback", "questionnaire",
-                    # ADDED: Enhanced survey patterns from Email 2
-                    "feedback request", "rate our service", "customer satisfaction",
-                    "take our survey", "your feedback is important", "please rate"
+                    "survey", "feedback", "rate our service"
                 ],
                 "Redirects/Updates (property changes)": [
-                    "property manager", "contact changed", "no longer with",
-                    "no longer employed", "department changed", "property manager changed"
+                    "property manager", "contact changed", "no longer with"
                 ]
-            },
-            "Uncategorized": {
-                "General": ["uncategorized", "unclear", "unknown"]
             }
         }
+
+    def classify_email(self, text: str) -> Dict[str, Any]:
+        """
+        Main classification method - clean and efficient.
         
-        self.logger.info("✅ ML classifier updated with enhanced patterns for misclassification fixes")
+        Args:
+            text: Email content to classify
+            
+        Returns:
+            Classification result with category, subcategory, and confidence
+        """
+        if not text or len(text.strip()) < MIN_TEXT_LENGTH:
+            return self._create_result("Uncategorized", "General", 0.3, "Empty or too short")
 
-    def classify_email(self, text: str, has_thread: bool = False) -> Dict[str, Any]:
-        """Main classification method - clean and efficient"""
-        try:
-            cleaned_text = self._clean_text(text)
-            if not cleaned_text:
-                return self._fallback_result("Empty text")
-            
-            # Thread emails - conservative approach
-            if has_thread:
-                return self._thread_classification(cleaned_text)
-            
-            # Main classification flow
-            main_category = self._classify_main_category(cleaned_text)
-            subcategory = self._classify_subcategory(cleaned_text, main_category)
-            confidence = self._calculate_confidence(cleaned_text, main_category, subcategory)
-            
-            return {
-                'category': main_category,
-                'subcategory': subcategory,
-                'confidence': confidence,
-                'method_used': 'ml_classification',
-                'reason': f'ML classified as {main_category}/{subcategory}',
-                'matched_patterns': self._get_matched_keywords(cleaned_text, main_category),
-                'thread_context': {'has_thread': has_thread, 'thread_count': 0},
-                'analysis_scores': {'ml_confidence': confidence, 'rule_confidence': 0.0}
-            }
-            
-        except Exception as e:
-            self.logger.error(f"❌ Classification error: {e}")
-            return self._fallback_result(f"Error: {e}")
-
-    def _thread_classification(self, text: str) -> Dict[str, Any]:
-        """Conservative thread handling - defer to Rule Engine"""
-        return {
-            'category': 'Manual Review',
-            'subcategory': 'Complex Queries',
-            'confidence': 0.6,
-            'method_used': 'ml_thread_defer',
-            'reason': 'Thread email - deferring to Rule Engine',
-            'matched_patterns': [],
-            'thread_context': {'has_thread': True, 'thread_count': 1},
-            'analysis_scores': {'ml_confidence': 0.6, 'rule_confidence': 0.0}
-        }
+        cleaned_text = self._preprocess_text(text)
+        
+        # Primary classification flow
+        main_category = self._classify_main_category(cleaned_text)
+        subcategory = self._classify_subcategory(cleaned_text, main_category)
+        confidence = self._calculate_confidence(cleaned_text, main_category, subcategory)
+        
+        return self._create_result(
+            category=main_category,
+            subcategory=subcategory,
+            confidence=confidence,
+            reason=f"ML classified as {main_category}/{subcategory}",
+            matched_patterns=self._get_matched_patterns(cleaned_text, main_category)
+        )
 
     def _classify_main_category(self, text: str) -> str:
-        """Clean main category classification"""
-        # Primary: Keyword-based classification
-        keyword_result = self._classify_by_keywords(text)
-        if keyword_result != "Uncategorized":
-            return keyword_result
+        """Classify main category using keyword scoring and BART model."""
         
-        # Secondary: BART model (if available)
+        # Primary: Advanced keyword scoring
+        keyword_scores = self._score_categories_by_keywords(text)
+        best_keyword_category = max(keyword_scores.items(), key=lambda x: x[1])
+        
+        if best_keyword_category[1] > 0:
+            return best_keyword_category[0]
+        
+        # Secondary: BART model if available
         if self.classifier:
             try:
-                result = self.classifier(text, list(self.main_categories.values()), multi_label=False)
-                best_description = result['labels'][0]
-                confidence = result['scores'][0]
+                result = self.classifier(
+                    text[:MAX_TEXT_LENGTH], 
+                    list(self.main_categories.values()),
+                    multi_label=False
+                )
                 
-                if confidence > 0.5:  # Higher threshold for BART
+                if result['scores'][0] > CONFIDENCE_THRESHOLDS['medium']:
+                    best_description = result['labels'][0]
                     for category, description in self.main_categories.items():
                         if description == best_description:
                             return category
             except Exception as e:
-                self.logger.error(f"❌ BART classification error: {e}")
+                self.logger.debug(f"BART classification failed: {e}")
         
-        # Fallback: Smart pattern matching
-        return self._smart_fallback(text)
+        # Fallback: Pattern-based classification
+        return self._pattern_fallback(text)
 
-    def _classify_by_keywords(self, text: str) -> str:
-        """Enhanced keyword classification with scoring"""
+    def _score_categories_by_keywords(self, text: str) -> Dict[str, float]:
+        """Advanced keyword scoring with weights and context."""
         text_lower = text.lower()
-        category_scores = {}
+        scores = {}
         
-        for category, keywords in self.category_keywords.items():
-            score = 0
-            for keyword in keywords:
-                if keyword in text_lower:
-                    # Weight longer phrases higher (more specific)
-                    weight = len(keyword.split())
-                    score += weight
-            category_scores[category] = score
+        for category, patterns in self.category_patterns.items():
+            score = 0.0
+            
+            # High weight patterns (more specific)
+            for pattern in patterns.get('high_weight', []):
+                if pattern in text_lower:
+                    score += 2.0  # Higher weight for specific patterns
+            
+            # Medium weight patterns
+            for pattern in patterns.get('medium_weight', []):
+                if pattern in text_lower:
+                    score += 1.0
+            
+            scores[category] = score
         
-        if category_scores:
-            best_category = max(category_scores.items(), key=lambda x: x[1])
-            if best_category[1] > 0:
-                return best_category[0]
-        
-        return "Uncategorized"
+        return scores
 
     def _classify_subcategory(self, text: str, main_category: str) -> str:
-        """FIXED subcategory classification - exact hierarchy match"""
-        if main_category not in self.subcategories:
+        """Classify subcategory based on main category."""
+        if main_category not in self.subcategory_patterns:
             return "General"
         
         text_lower = text.lower()
-        
-        # Score-based subcategory selection
         subcategory_scores = {}
         
-        for subcategory, keywords in self.subcategories[main_category].items():
-            score = 0
-            for keyword in keywords:
-                if keyword in text_lower:
-                    # Longer phrases get higher weight
-                    weight = len(keyword.split())
-                    score += weight
-            subcategory_scores[subcategory] = score
+        for subcategory, patterns in self.subcategory_patterns[main_category].items():
+            score = sum(1 for pattern in patterns if pattern in text_lower)
+            if score > 0:
+                subcategory_scores[subcategory] = score
         
-        # Return highest scoring subcategory
         if subcategory_scores:
-            best_subcategory = max(subcategory_scores.items(), key=lambda x: x[1])
-            if best_subcategory[1] > 0:
-                return best_subcategory[0]
+            return max(subcategory_scores.items(), key=lambda x: x[1])[0]
         
-        # Fallback to first subcategory for the category
-        return list(self.subcategories[main_category].keys())[0]
+        # Default subcategory for each main category
+        defaults = {
+            "Manual Review": "Complex Queries",
+            "No Reply (with/without info)": "General (Thank You)",
+            "Invoices Request": "Request (No Info)",
+            "Payments Claim": "Claims Paid (No Info)",
+            "Auto Reply (with/without info)": "No Info/Autoreply",
+            "Uncategorized": "General"
+        }
+        
+        return defaults.get(main_category, "General")
 
     def _calculate_confidence(self, text: str, category: str, subcategory: str) -> float:
-        """Clean confidence calculation"""
+        """Calculate confidence based on pattern matches and text quality."""
         text_lower = text.lower()
         
-        # Count category keyword matches
+        # Count category matches
         category_matches = 0
-        if category in self.category_keywords:
-            for keyword in self.category_keywords[category]:
-                if keyword in text_lower:
-                    category_matches += 1
+        if category in self.category_patterns:
+            for pattern_list in self.category_patterns[category].values():
+                category_matches += sum(1 for pattern in pattern_list if pattern in text_lower)
         
-        # Count subcategory keyword matches
+        # Count subcategory matches
         subcategory_matches = 0
-        if category in self.subcategories and subcategory in self.subcategories[category]:
-            for keyword in self.subcategories[category][subcategory]:
-                if keyword in text_lower:
-                    subcategory_matches += 1
+        if (category in self.subcategory_patterns and 
+            subcategory in self.subcategory_patterns[category]):
+            patterns = self.subcategory_patterns[category][subcategory]
+            subcategory_matches = sum(1 for pattern in patterns if pattern in text_lower)
         
-        # Combined confidence calculation
+        # Calculate base confidence
         total_matches = category_matches + subcategory_matches
         
-        if total_matches >= 3:
-            return 0.9
-        elif total_matches == 2:
-            return 0.8
-        elif total_matches == 1:
-            return 0.7
+        if total_matches >= 4:
+            return CONFIDENCE_THRESHOLDS['high']
+        elif total_matches >= 2:
+            return CONFIDENCE_THRESHOLDS['medium']
+        elif total_matches >= 1:
+            return CONFIDENCE_THRESHOLDS['low']
         else:
-            return 0.6
+            return CONFIDENCE_THRESHOLDS['fallback']
 
-    def _get_matched_keywords(self, text: str, category: str) -> List[str]:
-        """Get matched keywords for transparency"""
+    def _get_matched_patterns(self, text: str, category: str) -> List[str]:
+        """Get list of matched patterns for transparency."""
         text_lower = text.lower()
         matched = []
         
-        if category in self.category_keywords:
-            for keyword in self.category_keywords[category]:
-                if keyword in text_lower:
-                    matched.append(keyword)
+        if category in self.category_patterns:
+            for pattern_list in self.category_patterns[category].values():
+                for pattern in pattern_list:
+                    if pattern in text_lower:
+                        matched.append(pattern)
         
-        return matched[:5]  # Top 5 matches
+        return matched[:5]  # Return top 5 matches
 
-    def _smart_fallback(self, text: str) -> str:
-        """Smart fallback with clear business logic"""
+    def _pattern_fallback(self, text: str) -> str:
+        """Smart fallback classification based on business context."""
         text_lower = text.lower()
         
         # High-priority business patterns
-        if any(word in text_lower for word in ['dispute', 'disagreement', 'contested']):
+        if any(word in text_lower for word in [
+            'dispute', 'contested', 'disagreement', 'owe nothing', 'scam'
+        ]):
             return "Manual Review"
-        elif any(word in text_lower for word in ['invoice request', 'need invoice', 'send invoice']):
+        
+        elif any(word in text_lower for word in [
+            'send invoice', 'need invoice', 'provide invoice'
+        ]):
             return "Invoices Request"
-        elif any(word in text_lower for word in ['already paid', 'payment made', 'check sent']):
+        
+        elif any(word in text_lower for word in [
+            'already paid', 'payment made', 'check sent', 'proof of payment'
+        ]):
             return "Payments Claim"
-        elif any(word in text_lower for word in ['out of office', 'automatic reply', 'auto-reply']):
+        
+        elif any(word in text_lower for word in [
+            'out of office', 'automatic reply', 'survey', 'feedback'
+        ]):
             return "Auto Reply (with/without info)"
-        elif any(word in text_lower for word in ['ticket', 'case', 'notification', 'alert']):
+        
+        elif any(word in text_lower for word in [
+            'ticket', 'case', 'notification', 'alert', 'processing error'
+        ]):
             return "No Reply (with/without info)"
-        elif any(word in text_lower for word in ['payment', 'invoice', 'business', 'closure']):
+        
+        elif any(word in text_lower for word in [
+            'payment', 'invoice', 'business', 'closure'
+        ]):
             return "Manual Review"  # Conservative routing for business content
         
         return "Uncategorized"
 
-    def _clean_text(self, text: str) -> str:
-        """Clean text preprocessing"""
-        if not text or not isinstance(text, str):
+    def _preprocess_text(self, text: str) -> str:
+        """Clean and preprocess text for classification."""
+        if not isinstance(text, str):
             return ""
         
-        # Normalize whitespace
+        # Basic cleaning
         text = re.sub(r'\s+', ' ', text.strip())
+        text = re.sub(r'[^\w\s@.-]', ' ', text)  # Keep essential punctuation
         
-        # Reasonable length limit
+        # Limit length for transformer models
         words = text.split()
-        if len(words) > 300:  # Reduced from 500 for efficiency
-            text = ' '.join(words[:300])
+        if len(words) > MAX_TEXT_LENGTH:
+            text = ' '.join(words[:MAX_TEXT_LENGTH])
         
-        return text
+        return text.lower()
 
-    def _fallback_result(self, reason: str) -> Dict[str, Any]:
-        """Conservative fallback result"""
+    def _create_result(self, category: str, subcategory: str, confidence: float, 
+                      reason: str, matched_patterns: Optional[List[str]] = None) -> Dict[str, Any]:
+        """Create standardized classification result."""
         return {
-            'category': 'Uncategorized',
-            'subcategory': 'General',
-            'confidence': 0.5,
-            'method_used': 'ml_fallback',
-            'reason': f'ML fallback: {reason}',
-            'matched_patterns': [],
-            'thread_context': {'has_thread': False, 'thread_count': 0},
-            'analysis_scores': {'ml_confidence': 0.5, 'rule_confidence': 0.0}
+            'category': category,
+            'subcategory': subcategory,
+            'confidence': round(confidence, 3),
+            'method_used': 'ml_classification',
+            'reason': reason,
+            'matched_patterns': matched_patterns or [],
+            'analysis_scores': {
+                'ml_confidence': confidence,
+                'rule_confidence': 0.0
+            }
         }
+
+    def get_model_info(self) -> Dict[str, Any]:
+        """Get information about the classifier configuration."""
+        return {
+            'model_available': self.classifier is not None,
+            'main_categories': len(self.main_categories),
+            'total_patterns': sum(
+                len(patterns['high_weight']) + len(patterns['medium_weight'])
+                for patterns in self.category_patterns.values()
+            ),
+            'confidence_thresholds': CONFIDENCE_THRESHOLDS,
+            'max_text_length': MAX_TEXT_LENGTH
+        }
+
+    def validate_categories(self) -> Dict[str, bool]:
+        """Validate that all patterns align with category structure."""
+        validation_results = {}
+        
+        for category in self.main_categories:
+            has_patterns = category in self.category_patterns
+            has_subcategories = category in self.subcategory_patterns
+            validation_results[category] = has_patterns and has_subcategories
+        
+        return validation_results

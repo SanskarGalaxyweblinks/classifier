@@ -1,5 +1,5 @@
 """
-Clean Email Classifier with Simple Label Mapping
+Clean Email Classifier with Simple Label Mapping - NO THREAD LOGIC
 """
 
 import logging
@@ -15,7 +15,7 @@ from email_classifier.rule_engine import RuleEngine, RuleResult
 logger = logging.getLogger(__name__)
 
 class EmailClassifier:
-    """Clean Email Classifier with ALLOWED_LABELS mapping"""
+    """Clean Email Classifier with ALLOWED_LABELS mapping - Thread logic removed"""
     
     ALLOWED_LABELS = [
         "no_reply_no_info", "no_reply_with_info", 
@@ -38,10 +38,10 @@ class EmailClassifier:
         self.email_pattern = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
         self.ticket_pattern = r'(?:ticket|case|#)\s*[:\s]*[A-Z0-9-]+'
         
-        self.logger.info("✅ EmailClassifier initialized")
+        self.logger.info("✅ EmailClassifier initialized (no thread logic)")
 
     def classify_email(self, subject: str, body: str, email_id: Optional[int] = None) -> Dict[str, Any]:
-        """Main classification with mapping to ALLOWED_LABELS"""
+        """Main classification with mapping to ALLOWED_LABELS - NO THREAD LOGIC"""
         start_time = time.time()
         
         try:
@@ -58,7 +58,8 @@ class EmailClassifier:
                 analysis = None
             
             try:
-                ml_result = self.ml_classifier.classify_email(processed.cleaned_text, has_thread=processed.has_thread)
+                # ML Classifier call - removed has_thread parameter
+                ml_result = self.ml_classifier.classify_email(processed.cleaned_text)
             except Exception as e:
                 self.logger.warning(f"ML classification failed: {e}")
                 # Create fallback ML result
@@ -71,9 +72,10 @@ class EmailClassifier:
                 }
             
             try:
+                # Rule Engine call - removed has_thread parameter
                 rule_result = self.rule_engine.classify_sublabel(
                     ml_result['category'], processed.cleaned_text, 
-                    analysis=analysis, ml_result=ml_result, has_thread=processed.has_thread,
+                    analysis=analysis, ml_result=ml_result,
                     subject=processed.cleaned_subject
                 )
             except Exception as e:
@@ -91,7 +93,7 @@ class EmailClassifier:
             self.logger.debug(f"Email {email_id}: ML={ml_result['category']}/{ml_result.get('subcategory', 'N/A')}, "
                             f"Rule={rule_result.category}/{rule_result.subcategory}")
             
-            # Create detailed result
+            # Create detailed result - removed thread logic
             detailed_result = self._get_best_classification(ml_result, rule_result, processed, analysis, start_time)
             
             # Map to final label
@@ -110,7 +112,7 @@ class EmailClassifier:
             return self._fallback_result(f"Critical error: {e}", start_time)
 
     def debug_classification(self, subject: str, body: str) -> Dict[str, Any]:
-        """Debug method to see classification step-by-step"""
+        """Debug method to see classification step-by-step - NO THREAD LOGIC"""
         print(f"=== DEBUG CLASSIFICATION ===")
         print(f"Subject: {subject[:50]}...")
         print(f"Body length: {len(body)}")
@@ -120,12 +122,14 @@ class EmailClassifier:
             print(f"Processed text length: {len(processed.cleaned_text)}")
             print(f"Has thread: {processed.has_thread}")
             
-            ml_result = self.ml_classifier.classify_email(processed.cleaned_text, has_thread=processed.has_thread)
+            # ML classification - removed has_thread parameter
+            ml_result = self.ml_classifier.classify_email(processed.cleaned_text)
             print(f"ML Result: {ml_result['category']}/{ml_result.get('subcategory', 'N/A')} (conf: {ml_result['confidence']:.2f})")
             
+            # Rule classification - removed has_thread parameter
             rule_result = self.rule_engine.classify_sublabel(
                 ml_result['category'], processed.cleaned_text, 
-                has_thread=processed.has_thread, subject=processed.cleaned_subject
+                subject=processed.cleaned_subject
             )
             print(f"Rule Result: {rule_result.category}/{rule_result.subcategory} (conf: {rule_result.confidence:.2f})")
             
@@ -138,20 +142,21 @@ class EmailClassifier:
             return {'error': str(e)}
 
     def _get_best_classification(self, ml_result, rule_result, processed, analysis, start_time):
-        """Get best classification from ML and Rule results"""
-        thread_context = {
-            'has_thread': processed.has_thread,
-            'thread_count': 0,
+        """Get best classification from ML and Rule results - NO THREAD LOGIC"""
+        # Simplified context without thread logic
+        context = {
+            'has_thread': processed.has_thread,  # Keep for info but don't use in logic
+            'thread_count': getattr(processed, 'thread_count', 0),
             'current_reply': 0
         }
         
         base_result = {
-            'thread_context': thread_context,
+            'thread_context': context,
             'processing_time': time.time() - start_time,
             'timestamp': time.time()
         }
         
-        # High confidence rule
+        # High confidence rule (priority 1)
         if rule_result.confidence >= 0.8:
             return {
                 **base_result,
@@ -163,19 +168,7 @@ class EmailClassifier:
                 'matched_patterns': rule_result.matched_rules
             }
         
-        # Thread priority
-        if processed.has_thread:
-            return {
-                **base_result,
-                'category': rule_result.category,
-                'subcategory': rule_result.subcategory,
-                'confidence': min(rule_result.confidence + 0.1, 0.9),
-                'method_used': 'thread_priority',
-                'reason': f"Thread: {rule_result.reason}",
-                'matched_patterns': rule_result.matched_rules
-            }
-        
-        # Combined ML + Rule
+        # Combined ML + Rule (priority 2) - no thread bonus
         if ml_result['confidence'] >= 0.6 and rule_result.confidence >= 0.4:
             return {
                 **base_result,
@@ -187,7 +180,7 @@ class EmailClassifier:
                 'matched_patterns': rule_result.matched_rules
             }
         
-        # Rule fallback
+        # Rule fallback (priority 3)
         return {
             **base_result,
             'category': rule_result.category,
@@ -262,7 +255,7 @@ class EmailClassifier:
         return False
 
     def _fallback_result(self, reason: str, start_time: float) -> Dict[str, Any]:
-        """Create a fallback result when classification fails"""
+        """Create a fallback result when classification fails - NO THREAD LOGIC"""
         return {
             'category': 'Manual Review',
             'subcategory': 'Error Handling',

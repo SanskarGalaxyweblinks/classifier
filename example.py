@@ -65,7 +65,6 @@ class CSVEmailProcessor:
                 processed.cleaned_text,
                 analysis=analysis,
                 ml_result=ml_result,
-                has_thread=processed.has_thread,
                 subject=processed.cleaned_subject
             )
             print(f"   ✅ Rule Result: {rule_result.category}/{rule_result.subcategory}")

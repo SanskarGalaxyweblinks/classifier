@@ -101,14 +101,13 @@ class RuleEngine:
     self,
     main_category: str,
     text: str,
-    has_thread: bool = False,
     analysis: Optional[TextAnalysis] = None,
     ml_result: Optional[Dict[str, Any]] = None,
     retry_count: int = 3,
     subject: str = ""
     ) -> RuleResult:
         """
-        UPDATED: Fixed misclassifications - addresses survey, dispute, payment proof, and sales detection
+        UPDATED: Removed thread logic - addresses survey, dispute, payment proof, and sales detection
         Improved conflict resolution and pattern priority
         FIXES: Legal disputes, settlement arrangements, payment plans, return dates, ticket creation
         """
@@ -246,8 +245,8 @@ class RuleEngine:
                     text_lower, exclude_external_proof=True
                 )
                 
-                # LOWERED CONFIDENCE THRESHOLDS - Trust pattern matcher more
-                min_confidence = 0.50 if has_thread else 0.45
+                # STANDARD CONFIDENCE THRESHOLD - No thread logic
+                min_confidence = 0.45
                 
                 if main_cat and confidence >= min_confidence:
                     
@@ -368,41 +367,7 @@ class RuleEngine:
             if any(phrase in text_lower for phrase in ticket_creation_phrases):
                 return RuleResult("No Reply (with/without info)", "Created", 0.78, "Ticket creation detected", ["ticket_creation_fallback"])
 
-            # STEP 5: Thread-specific logic (IMPROVED - not over-conservative)
-            if has_thread:
-                # For threads, use slightly more conservative approach but with better logic
-                
-                # Clear business threads that can be auto-classified
-                if any(phrase in text_lower for phrase in past_payment_phrases):
-                    return RuleResult("Payments Claim", "Claims Paid (No Info)", 0.70, "Thread payment claim", ["thread_payment"])
-                
-                if any(phrase in text_lower for phrase in enhanced_dispute_phrases):
-                    return RuleResult("Manual Review", "Partial/Disputed Payment", 0.70, "Thread dispute", ["thread_dispute"])
-                
-                if any(phrase in text_lower for phrase in clear_invoice_requests):
-                    # Check if it's actually payment proof in a thread
-                    if not any(proof in text_lower for proof in ['was paid', 'see attachments', 'proof']):
-                        return RuleResult("Invoices Request", "Request (No Info)", 0.70, "Thread invoice request", ["thread_invoice"])
-                
-                if any(phrase in text_lower for phrase in clear_system_errors):
-                    return RuleResult("No Reply (with/without info)", "Processing Errors", 0.70, "Thread system error", ["thread_system"])
-                
-                if any(phrase in text_lower for phrase in survey_indicators):
-                    return RuleResult("Auto Reply (with/without info)", "Survey", 0.70, "Thread survey", ["thread_survey"])
-                
-                # Enhanced sales detection in threads
-                if any(phrase in text_lower for phrase in enhanced_sales_patterns):
-                    return RuleResult("No Reply (with/without info)", "Sales/Offers", 0.70, "Thread sales/marketing", ["thread_sales"])
-                
-                # General business threads - but not everything goes to Manual Review!
-                business_terms = ["payment", "invoice", "account", "bill"]
-                if len([term for term in business_terms if term in text_lower]) >= 2:
-                    return RuleResult("Manual Review", "Inquiry/Redirection", 0.65, "Thread business communication", ["thread_business"])
-                else:
-                    # Non-business threads can be classified normally
-                    return RuleResult("No Reply (with/without info)", "General (Thank You)", 0.60, "Thread general", ["thread_general"])
-
-            # STEP 6: Final conservative fallback (MUCH more restrictive)
+            # STEP 5: Final conservative fallback (MUCH more restrictive)
             
             # Only send to Manual Review if there are MULTIPLE business indicators
             complex_business_indicators = ["payment", "invoice", "dispute", "collection", "debt", "billing"]

@@ -164,12 +164,16 @@ class PatternMatcher:
                     r"please.*share.*the.*invoice", r"can.*you.*send.*the.*invoice",
                     r"need.*a.*copy.*of.*the.*invoice", r"invoice.*copies.*needed",
                     r"send.*copies.*of.*invoices", r"provide.*invoice.*documentation",
-                    r"copies.*of.*the.*past.*due.*invoices", r"send.*me.*copies.*of.*invoices"
+                    r"copies.*of.*the.*past.*due.*invoices", r"send.*me.*copies.*of.*invoices",
+                    r"please.*send.*invoices", r"need.*invoice.*copy", r"provide.*invoices",
+                    r"send.*me.*the.*invoice", r"copies.*of.*invoices",
+                    r"(?!.*automatic)(?!.*system)send.*invoices"
                 ]
             },
 
             "Payments Claim": {
                 "Claims Paid (No Info)": [
+                    # Basic payment claims without proof documents
                     r"already.*paid", r"payment.*was.*made", r"we.*paid", r"bill.*was.*paid",
                     r"payment.*was.*sent", r"check.*sent", r"payment.*completed",
                     r"this.*was.*paid", r"account.*paid", r"made.*payment", r"been.*paid",
@@ -181,29 +185,35 @@ class PatternMatcher:
                 ],
                 
                 "Payment Confirmation": [
+                    # Direct attachment references
                     r"see.*attachments", r"proof.*attached", r"payment.*confirmation.*attached",
                     r"receipt.*attached", r"confirmation.*attached", r"attached.*payment",
-                    r"invoice.*was.*paid.*see.*attachments", r"here.*is.*proof.*of.*payment",
-                    r"payment.*receipt.*number", r"wire.*transfer.*confirmation",
+                    r"invoice.*was.*paid.*see.*attachments", r"see.*attached.*check",
+                    r"proof.*of.*payment.*attached", r"please.*see.*attached.*cancelled.*check",
+                    r"use.*as.*proof.*of.*payment", r"please.*use.*as.*proof",
                     r"check.*number.*\d+", r"transaction.*id.*\w+", r"eft.*\w+",
                     r"wire.*confirmation.*\w+", r"batch.*number.*\w+", r"reference.*number.*\w+",
-                    r"paid.*via.*transaction.*number.*\w+", r"ach.*confirmation.*number",
-                    r"payment.*proof.*attached", r"please.*see.*attached.*cancelled.*check", 
-                    r"use.*as.*proof.*of.*payment", r"please.*use.*as.*proof", r"they.*have.*everything", 
-                    r"transaction#.*\d+", r"ach.*amount.*\$", r"remittance.*details.*for.*your.*reference",
-                    r"detailed.*remittance", r"see.*attached.*check", r"proof.*of.*payment.*attached",
-                    r"payment.*details.*below", r"remittance.*information", r"wire.*document",
-                    r"electronic.*payment.*confirmation", r"bank.*confirmation", r"payment.*verification"
+                    r"transaction#.*\d+", r"ach.*confirmation.*number", r"ach.*amount.*\$",
+                    r"paid.*via.*transaction.*number.*\w+",
+                    r"here.*is.*proof.*of.*payment", r"payment.*proof.*attached",
+                    r"wire.*transfer.*confirmation", r"payment.*receipt.*number",
+                    r"electronic.*payment.*confirmation", r"bank.*confirmation",
+                    r"payment.*verification", r"they.*have.*everything",
+                    r"remittance.*details.*for.*your.*reference", r"detailed.*remittance",
+                    r"payment.*details.*below", r"remittance.*information",
+                    r"wire.*document"
                 ],
 
                 "Payment Details Received": [
-                    r"payment.*will.*be.*sent", r"payment.*being.*processed", r"check.*will.*be.*mailed",
-                    r"payment.*scheduled", r"in.*process.*of.*issuing.*payment",
-                    r"invoices.*being.*processed.*for.*payment", r"will.*pay.*this.*online",
-                    r"working.*on.*payment", r"need.*time.*to.*pay",
+                    # Future payment commitments
+                    r"payment.*will.*be.*sent", r"payment.*being.*processed", 
+                    r"check.*will.*be.*mailed", r"payment.*scheduled",
+                    r"in.*process.*of.*issuing.*payment", r"invoices.*being.*processed.*for.*payment",
+                    r"will.*pay.*this.*online", r"working.*on.*payment", r"need.*time.*to.*pay",
                     r"payment.*is.*being.*processed", r"check.*is.*being.*prepared",
-                    r"payment.*will.*be.*issued", r"check.*will.*be.*sent", r"payment.*in.*progress",
-                    r"payment.*timeline", r"payment.*schedule", r"arranging.*payment"
+                    r"payment.*will.*be.*issued", r"check.*will.*be.*sent",
+                    r"payment.*in.*progress", r"payment.*timeline", r"payment.*schedule",
+                    r"arranging.*payment"
                 ]
             },
             

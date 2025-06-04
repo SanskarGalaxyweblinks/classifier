@@ -218,51 +218,83 @@ class EmailClassifier:
             return "manual_review"
 
     def _has_payment_proof(self, text: str) -> bool:
-        """FIXED: Enhanced payment proof detection"""
+        """CRITICAL FIX: Enhanced payment proof detection for claims_paid_with_proof"""
         text_lower = text.lower()
         
-        # Strong proof indicators (specific attachments and transaction details)
-        strong_proof = [
-            'see attached', 'attached cancelled check', 'proof attached',
-            'payment confirmation attached', 'receipt attached', 'wire confirmation',
-            'here is proof of payment', 'use as proof of payment', 'proof of payment'
+        # PRIORITY 1: Direct attachment references (MISSING FROM CURRENT)
+        attachment_proof = [
+            'see attached', 'see attachments', 'please see attached', 
+            'attached cancelled check', 'proof attached', 'receipt attached',
+            'payment confirmation attached', 'confirmation attached',
+            'invoice was paid see attachments',  # Email #4 specific
+            'use as proof of payment', 'please use as proof'
         ]
         
-        # Transaction details with numbers/IDs
+        # PRIORITY 2: Transaction details with specific numbers/IDs
         transaction_patterns = [
-            r'check number\s*[#:]?\s*\d+', r'transaction id\s*[#:]?\s*\w+',
-            r'eft#\s*\w+', r'confirmation number\s*[#:]?\s*\w+',
-            r'transaction#\s*\d+', r'batch number\s*[#:]?\s*\w+',
-            r'wire confirmation\s*[#:]?\s*\w+', r'ach amount\s*\$[\d,]+'
+            r'check number\s*[#:]?\s*\d+',           # check number 12345
+            r'transaction id\s*[#:]?\s*\w+',         # transaction id ABC123
+            r'transaction#\s*\d+',                   # transaction# 11174129829  
+            r'eft#\s*\w+',                          # eft# 12345
+            r'wire confirmation\s*[#:]?\s*\w+',      # wire confirmation 567
+            r'batch number\s*[#:]?\s*\w+',          # batch number XYZ
+            r'confirmation number\s*[#:]?\s*\w+',    # confirmation number 789
+            r'ach amount\s*\$[\d,]+',               # ach amount $1,598.56
+            r'reference number\s*[#:]?\s*\w+'       # reference number REF123
         ]
         
-        # Structured payment data
-        structured_proof = [
-            'remittance details for your reference', 'payment details below',
-            'transaction# ', 'vendor:', 'invoice# ', 'po# '
+        # PRIORITY 3: Explicit proof statements  
+        proof_statements = [
+            'here is proof of payment', 'proof of payment', 'payment receipt',
+            'wire transfer confirmation', 'payment confirmation number',
+            'payment details below', 'remittance details for your reference',
+            'wire document', 'payment breakdown', 'cancelled check',
+            'they have everything'  # When referring to payment records
         ]
         
-        # Check strong proof indicators
-        if any(phrase in text_lower for phrase in strong_proof):
+        # PRIORITY 4: Structured payment data
+        structured_data = [
+            'vendor:', 'po#', 'invoice#', 'amount', 'date:'
+        ]
+        
+        # Check 1: Direct attachment references (CRITICAL FOR EMAIL #4)
+        if any(phrase in text_lower for phrase in attachment_proof):
             return True
         
-        # Check transaction patterns
+        # Check 2: Transaction patterns with regex
+        import re
         for pattern in transaction_patterns:
             if re.search(pattern, text_lower):
                 return True
         
-        # Check structured data
-        if any(phrase in text_lower for phrase in structured_proof):
+        # Check 3: Explicit proof statements
+        if any(phrase in text_lower for phrase in proof_statements):
             return True
         
-        # Exclude future payments
+        # Check 4: Structured remittance data (like Email #143)
+        structured_count = sum(1 for phrase in structured_data if phrase in text_lower)
+        if structured_count >= 3:  # Has vendor, amount, date etc.
+            return True
+        
+        # Check 5: Payment confirmation with details
+        if ('payment' in text_lower and 'confirmation' in text_lower and 
+            any(detail in text_lower for detail in ['attached', 'number', 'details', 'below'])):
+            return True
+        
+        # EXCLUSION: Future payments (not proof)
         future_payment_phrases = [
             'will pay', 'going to pay', 'payment will be sent', 'check will be mailed',
-            'payment being processed', 'working on payment', 'need time to pay'
+            'payment being processed', 'working on payment', 'need time to pay',
+            'in process of issuing payment'
         ]
         
+        # If it's about future payments without actual proof, exclude
         if any(phrase in text_lower for phrase in future_payment_phrases):
-            return False
+            # Only exclude if no actual proof is mentioned
+            has_proof = (any(phrase in text_lower for phrase in attachment_proof) or
+                        any(phrase in text_lower for phrase in proof_statements))
+            if not has_proof:
+                return False
         
         return False
 

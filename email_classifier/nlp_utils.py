@@ -5,7 +5,7 @@ Focus on accuracy and performance, smart entity extraction and topic identificat
 
 import logging
 import re
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Any
 from dataclasses import dataclass
 import unicodedata
 

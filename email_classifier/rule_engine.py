@@ -107,7 +107,11 @@ class RuleEngine:
     retry_count: int = 3,
     subject: str = ""
     ) -> RuleResult:
-        """FIXED: Enhanced email classification with proper payment claims, invoice requests, and auto-reply detection"""
+        """
+        UPDATED: Fixed misclassifications - addresses survey, dispute, payment proof, and sales detection
+        Improved conflict resolution and pattern priority
+        FIXES: Legal disputes, settlement arrangements, payment plans, return dates, ticket creation
+        """
         start_time = time.time()
         text_lower = text.lower().strip() if isinstance(text, str) else ""
         subject_lower = subject.lower().strip() if isinstance(subject, str) else ""
@@ -115,255 +119,313 @@ class RuleEngine:
         try:
             self.metrics.total_processed += 1
 
+            # Input validation
             if not text_lower and not subject_lower:
                 return RuleResult("Uncategorized", "General", 0.1, "Empty input", ["empty_input"])
             
             if not main_category or not isinstance(main_category, str):
                 return RuleResult("Uncategorized", "General", 0.1, "Invalid main category", ["invalid_category"])
 
-            # STEP 1: CRITICAL FIX - Future payment exclusion (prevents misclassification)
-            future_payment_phrases = [
-                'will pay', 'going to pay', 'willing to pay', 'asap', 'next week',
-                'send payment asap', 'we will', 'planning to pay', 'broke right now',
-                'need time to pay', 'payment will be sent', 'check will be mailed'
-            ]
+            # STEP 1: High-priority edge cases (before pattern matcher)
             
-            if any(phrase in text_lower for phrase in future_payment_phrases):
-                # These are NOT payment claims - they're future commitments
-                return RuleResult("Manual Review", "Complex Queries", 0.75, 
-                                "Future payment commitment", ["future_payment_detected"])
-
-            # STEP 2: System auto-reply detection (prevents invoice request misclassification)
-            system_indicators = [
-                'automated', 'system response', 'portal information', 'automatic reply',
-                'this inbox is not monitored', 'do not reply', 'automatically generated',
-                'system has received', 'automated notification'
+            # 1A: ENHANCED Legal/Attorney communications - CRITICAL FIX (Emails 5, 6)
+            enhanced_legal_phrases = [
+                'attorney', 'law firm', 'esq.', 'legal counsel', 'cease and desist', 'fdcpa', 'legal action',
+                'cease and desist letter', 'legal notice', 'debt validation', 'collection agency violation',
+                'fair debt collection', 'attorney correspondence', 'legal representation'
             ]
-            
-            if any(indicator in text_lower for indicator in system_indicators):
-                return RuleResult("Auto Reply (with/without info)", "No Info/Autoreply", 0.85,
-                                "System automated response", ["system_detected"])
-
-            # STEP 3: Enhanced auto-reply subject detection
-            auto_reply_subjects = ["automatic reply:", "auto-reply:", "automatic reply", "auto reply"]
-            if any(indicator in subject_lower for indicator in auto_reply_subjects):
-                business_terms = ["dispute", "owe nothing", "payment made", "check sent", "invoice"]
-                if not any(term in text_lower for term in business_terms):
-                    if "out of office" in text_lower or "away from" in text_lower:
-                        if self._has_return_date(text_lower) and self._has_contact_person(text_lower):
-                            return RuleResult("Auto Reply (with/without info)", "Return Date Specified", 0.88, 
-                                            "OOO with return date and contact", ["auto_reply_return_contact"])
-                        elif self._has_return_date(text_lower):
-                            return RuleResult("Auto Reply (with/without info)", "Return Date Specified", 0.85, 
-                                            "OOO with return date", ["auto_reply_return"])
-                        elif self._has_contact_person(text_lower):
-                            return RuleResult("Auto Reply (with/without info)", "With Alternate Contact", 0.85, 
-                                            "OOO with contact", ["auto_reply_contact"])
-                        else:
-                            return RuleResult("Auto Reply (with/without info)", "No Info/Autoreply", 0.82, 
-                                            "Generic OOO", ["auto_reply_generic"])
-                    return RuleResult("Auto Reply (with/without info)", "No Info/Autoreply", 0.80, 
-                                    "Auto-reply subject", ["auto_reply_subject"])
-
-            # STEP 4: Legal and dispute detection (highest priority)
-            legal_terms = ['attorney', 'law firm', 'legal counsel', 'cease and desist', 'fdcpa', 'legal action']
-            strong_disputes = [
-                'owe nothing', 'owe them nothing', 'consider this a scam', 'not legitimate', 
-                'formally disputing', 'dispute this debt', 'refuse payment', 'will not pay',
-                'do not acknowledge', 'billing is incorrect', 'not our responsibility'
-            ]
-            
-            if any(term in text_lower for term in legal_terms):
-                if any(dispute in text_lower for dispute in strong_disputes):
-                    return RuleResult("Manual Review", "Partial/Disputed Payment", 0.95, 
-                                    "Legal dispute detected", ["legal_dispute"])
+            if any(phrase in text_lower for phrase in enhanced_legal_phrases):
+                # Legal disputes go to Partial/Disputed Payment, not Complex Queries
+                if any(dispute in text_lower for dispute in ['dispute', 'owe nothing', 'do not acknowledge', 'contested']):
+                    return RuleResult("Manual Review", "Partial/Disputed Payment", 0.95, "Legal dispute communication", ["legal_dispute_detected"])
                 else:
-                    return RuleResult("Manual Review", "Complex Queries", 0.95, 
-                                    "Legal communication", ["legal_communication"])
+                    return RuleResult("Manual Review", "Complex Queries", 0.95, "Legal communication detected", ["legal_detected"])
             
-            if any(dispute in text_lower for dispute in strong_disputes):
-                return RuleResult("Manual Review", "Partial/Disputed Payment", 0.90, 
-                                "Strong dispute detected", ["strong_dispute"])
-
-            # STEP 5: FIXED Payment claims with proof detection
-            payment_proof_indicators = [
-                'see attachments', 'see attached', 'proof attached', 'payment confirmation attached',
-                'use as proof of payment', 'please use as proof', 'they have everything',
-                'transaction#', 'ach amount', 'remittance details', 'check number',
-                'wire confirmation', 'cancelled check attached', 'proof of payment',
-                'invoice was paid see attachments', 'here is proof', 'receipt attached'
+            # 1B: ENHANCED Settlement detection - CRITICAL FIX (Email 31)
+            settlement_phrases = [
+                'settlement arrangement', 'legal settlement', 'payment settlement', 'settlement negotiation',
+                'settlement terms', 'attorney settlement', 'legal resolution', 'settlement discussion',
+                'court settlement', 'mediation settlement', 'settlement agreement'
             ]
+            if any(phrase in text_lower for phrase in settlement_phrases):
+                return RuleResult("Manual Review", "Complex Queries", 0.93, "Settlement arrangement detected", ["settlement_detected"])
             
-            # FIXED: Only past tense payment claims
-            past_payment_claims = [
-                'already paid', 'payment was made', 'we paid', 'bill was paid',
-                'payment was sent', 'check sent', 'this was paid', 'been paid',
-                'account paid', 'invoice was paid', 'balance is paid', 'have paid',
-                'i paid that bill', 'this has been paid', 'account is paid'
-            ]
-            
-            # Check for payment with proof first (higher priority)
-            if any(proof in text_lower for proof in payment_proof_indicators):
-                if any(claim in text_lower for claim in ['paid', 'payment']):
-                    return RuleResult("Payments Claim", "Payment Confirmation", 0.90, 
-                                    "Payment with proof detected", ["payment_proof"])
-            
-            # Then check for basic payment claims (without proof)
-            if any(claim in text_lower for claim in past_payment_claims):
-                return RuleResult("Payments Claim", "Claims Paid (No Info)", 0.85, 
-                                "Payment claim detected", ["payment_claim"])
+            # 1C: High-value amounts (immediate Manual Review)
+            amount_pattern = re.compile(r'\$[\d,]+\.?\d*')
+            amounts = amount_pattern.findall(text_lower)
+            for amount_str in amounts:
+                try:
+                    amount_value = float(amount_str.replace('$', '').replace(',', ''))
+                    if amount_value > 15000:
+                        return RuleResult("Manual Review", "Complex Queries", 0.90, f"High-value amount: {amount_str}", ["high_value"])
+                except (ValueError, AttributeError):
+                    continue
 
-            # STEP 6: Payment status inquiries
-            payment_inquiry_patterns = [
-                'did you receive', 'have you received payment', 'check was mailed',
-                'i mailed a check', 'ups delivered this check', 'check was delivered'
-            ]
-            
-            if any(pattern in text_lower for pattern in payment_inquiry_patterns):
-                return RuleResult("Payments Claim", "Claims Paid (No Info)", 0.85, 
-                                "Payment inquiry", ["payment_inquiry"])
-
-            # STEP 7: FIXED Invoice requests (more specific)
-            clear_invoice_requests = [
-                'send me the invoice', 'provide the invoice', 'share the invoice',
-                'need invoice copy', 'provide outstanding invoices', 'copies of invoices',
-                'send invoices that are due', 'provide copies of', 'send copies of invoices'
-            ]
-            
-            if any(request in text_lower for request in clear_invoice_requests):
-                # Exclude if it's providing proof or documentation
-                proof_context = ['paid', 'payment made', 'attached', 'proof', 'see attached']
-                if not any(context in text_lower for context in proof_context):
-                    return RuleResult("Invoices Request", "Request (No Info)", 0.88, 
-                                    "Invoice request detected", ["invoice_request"])
-
-            # STEP 8: FIXED Documentation vs invoice requests
-            simple_doc_requests = [
-                'provide backup documentation', 'backup required', 'supporting documents',
-                'backup documentation for the invoices', 'need documentation'
-            ]
-            
-            if any(request in text_lower for request in simple_doc_requests):
-                return RuleResult("Invoices Request", "Request (No Info)", 0.80,
-                                "Documentation request", ["doc_request"])
-
-            # STEP 9: Customer questions and inquiries
-            customer_questions = [
-                'what bills?', 'what is this for?', 'what are they charging me for?',
-                'what i need to know', 'what service', 'never had a contract',
-                'no agreement with', 'can you provide', 'where is the'
-            ]
-            
-            if any(question in text_lower for question in customer_questions):
-                return RuleResult("Manual Review", "Inquiry/Redirection", 0.85, 
-                                "Customer question detected", ["customer_question"])
-
-            # STEP 10: Survey and feedback
-            survey_indicators = ['survey', 'feedback', 'rate our service', 'customer satisfaction', 'take our survey']
+            # 1D: PRIORITY FIX - Survey detection (before dispute patterns)
+            survey_indicators = ['survey', 'feedback', 'rate our service', 'customer satisfaction', 'please rate']
             if any(indicator in text_lower for indicator in survey_indicators):
+                # Only classify as survey if no strong dispute language
+                strong_disputes = ['owe nothing', 'scam', 'formally disputing', 'do not acknowledge']
                 if not any(dispute in text_lower for dispute in strong_disputes):
-                    return RuleResult("Auto Reply (with/without info)", "Survey", 0.85, 
-                                    "Survey detected", ["survey"])
+                    return RuleResult("Auto Reply (with/without info)", "Survey", 0.88, "Survey/feedback detected", ["survey_priority"])
 
-            # STEP 11: Sales and marketing content
-            sales_indicators = [
-                'prices increasing', 'price increase', 'limited time', 'hours left',
-                'special offer', 'promotional offer', 'discount offer', 'sale ending'
+            # 1E: PRIORITY FIX - Enhanced dispute detection (including missed patterns)
+            enhanced_dispute_phrases = [
+                'owe them nothing', 'owe nothing', 'consider this a scam', 'looks like a scam',
+                'is this legitimate', 'verify this debt', 'formally disputing', 'dispute this debt',
+                'do not acknowledge', 'billing is incorrect', 'not our responsibility',
+                'cease and desist', 'fdcpa violation', 'debt validation request'
             ]
-            
-            if any(indicator in text_lower for indicator in sales_indicators):
-                return RuleResult("No Reply (with/without info)", "Sales/Offers", 0.85, 
-                                "Sales content", ["sales"])
+            if any(phrase in text_lower for phrase in enhanced_dispute_phrases):
+                return RuleResult("Manual Review", "Partial/Disputed Payment", 0.90, "Enhanced dispute detection", ["enhanced_dispute"])
 
-            # STEP 12: System errors and notifications
-            system_errors = [
-                'processing error', 'system unable to process', 'delivery failed',
-                'electronic invoice rejected', 'cannot be processed', 'import failed'
+            # 1F: ENHANCED Payment proof vs Invoice request distinction
+            if 'invoice' in text_lower:
+                # Check for payment proof first (higher priority)
+                payment_proof_patterns = [
+                    'invoice was paid', 'payment was made', 'see attachments', 'proof attached',
+                    'here is proof', 'payment confirmation', 'check was sent', 'wire was sent',
+                    'payment made in error', 'error payment proof', 'documentation for payment error'
+                ]
+                if any(pattern in text_lower for pattern in payment_proof_patterns):
+                    # CRITICAL FIX: Payment error documentation should go to Invoice Receipt (Email 139)
+                    if any(error in text_lower for error in ['error', 'mistake', 'incorrect payment']):
+                        return RuleResult("Manual Review", "Invoice Receipt", 0.88, "Payment error documentation", ["payment_error_doc"])
+                    else:
+                        return RuleResult("Payments Claim", "Payment Confirmation", 0.88, "Payment proof provided", ["payment_proof_priority"])
+                
+                # Then check for invoice requests (excluding proof scenarios)
+                invoice_request_patterns = [
+                    'send me the invoice', 'need invoice copy', 'provide outstanding invoices',
+                    'copies of invoices', 'share the invoice'
+                ]
+                if any(pattern in text_lower for pattern in invoice_request_patterns):
+                    # Exclude if providing documentation/proof
+                    if not any(proof in text_lower for proof in ['paid', 'see attachments', 'proof']):
+                        return RuleResult("Invoices Request", "Request (No Info)", 0.85, "Clear invoice request", ["invoice_request_priority"])
+
+            # 1G: ENHANCED Sales/Marketing detection - CRITICAL FIX (Email 94)
+            enhanced_sales_patterns = [
+                'prices increasing', 'price increase', 'limited time', 'hours left', 'sale ending',
+                'special pricing', 'promotional offer', 'discount offer', 'exclusive deal',
+                'payment plan options', 'payment plan discussion', 'installment plan',
+                'financing options', 'payment arrangement offer', 'flexible payment options'
             ]
-            
-            if any(error in text_lower for error in system_errors):
-                return RuleResult("No Reply (with/without info)", "Processing Errors", 0.85, 
-                                "System error", ["system_error"])
+            if any(pattern in text_lower for pattern in enhanced_sales_patterns):
+                return RuleResult("No Reply (with/without info)", "Sales/Offers", 0.85, "Sales/marketing content", ["sales_marketing_priority"])
 
-            # STEP 13: Ticket and case management
-            ticket_creation = ['ticket created', 'case opened', 'support request created', 'new ticket']
-            ticket_resolution = ['resolved', 'case closed', 'ticket closed', 'completed']
-            
-            if any(pattern in text_lower for pattern in ticket_creation):
-                return RuleResult("No Reply (with/without info)", "Created", 0.85, 
-                                "Ticket created", ["ticket_created"])
-            
-            if any(pattern in text_lower for pattern in ticket_resolution):
-                return RuleResult("No Reply (with/without info)", "Resolved", 0.85, 
-                                "Ticket resolved", ["ticket_resolved"])
+            # 1H: ENHANCED Auto-reply with return date detection - CRITICAL FIX (8 emails)
+            return_date_patterns = [
+                'return on', 'back on', 'returning', 'will be back', 'return date',
+                'back monday', 'return monday', 'back next week', 'return next week',
+                'out until', 'away until', 'return after', 'back after'
+            ]
+            if any(pattern in text_lower for pattern in return_date_patterns):
+                if any(ooo in text_lower for ooo in ['out of office', 'away from desk', 'on vacation']):
+                    return RuleResult("Auto Reply (with/without info)", "Return Date Specified", 0.88, "OOO with return date", ["return_date_priority"])
 
-            # STEP 14: Pattern matcher fallback
+            # 1I: Clear auto-reply subject lines (early detection)
+            auto_reply_indicators = ["automatic reply:", "auto-reply:", "automatic reply", "auto reply"]
+            if any(indicator in subject_lower for indicator in auto_reply_indicators):
+                # Only classify as auto-reply if no strong business context
+                business_context = any(term in text_lower for term in ["payment", "invoice", "dispute", "collection", "debt"])
+                if not business_context:
+                    # Enhanced OOO detection with return dates
+                    if any(phrase in text_lower for phrase in ["out of office", "away from desk", "on vacation"]):
+                        if any(date_pattern in text_lower for date_pattern in return_date_patterns):
+                            return RuleResult("Auto Reply (with/without info)", "Return Date Specified", 0.88, "OOO with return date", ["ooo_return_date"])
+                        elif any(word in text_lower for word in ["contact", "call", "reach", "assistance"]):
+                            return RuleResult("Auto Reply (with/without info)", "With Alternate Contact", 0.88, "OOO with contact", ["ooo_contact"])
+                        else:
+                            return RuleResult("Auto Reply (with/without info)", "No Info/Autoreply", 0.85, "Generic OOO", ["ooo_generic"])
+                    return RuleResult("Auto Reply (with/without info)", "No Info/Autoreply", 0.82, "Auto-reply subject", ["auto_reply_subject"])
+
+            # STEP 2: Pattern Matcher (PRIMARY CLASSIFICATION - Trust it more, but with fixes!)
             if hasattr(self, 'pattern_matcher'):
-                main_cat, subcat, confidence, patterns = self.pattern_matcher.match_text(text_lower)
-                if main_cat and confidence >= 0.65:
+                main_cat, subcat, confidence, patterns = self.pattern_matcher.match_text(
+                    text_lower, exclude_external_proof=True
+                )
+                
+                # LOWERED CONFIDENCE THRESHOLDS - Trust pattern matcher more
+                min_confidence = 0.50 if has_thread else 0.45
+                
+                if main_cat and confidence >= min_confidence:
+                    
+                    # ENHANCED conflict resolution with specific fixes
+                    
+                    # Fix: Auto-reply vs Business content (major conflict source)
+                    if main_cat == "Auto Reply (with/without info)":
+                        strong_business_terms = ['payment dispute', 'invoice issue', 'debt collection', 'billing error']
+                        business_terms = ['payment', 'invoice', 'dispute', 'collection', 'debt', 'bill']
+                        
+                        # Strong business terms override auto-reply
+                        if any(term in text_lower for term in strong_business_terms):
+                            return RuleResult("Manual Review", "Inquiry/Redirection", confidence, "Strong business override", patterns)
+                        # Payment claims override auto-reply
+                        elif any(phrase in text_lower for phrase in ['already paid', 'payment made', 'check sent']):
+                            return RuleResult("Payments Claim", "Claims Paid (No Info)", confidence, "Payment claim override", patterns)
+                        # Dispute claims override auto-reply
+                        elif any(phrase in text_lower for phrase in enhanced_dispute_phrases):
+                            return RuleResult("Manual Review", "Partial/Disputed Payment", confidence, "Dispute override", patterns)
+                        # Weak business terms in clear auto-reply context - trust auto-reply
+                        elif any(phrase in text_lower for phrase in ['out of office', 'automatic reply', 'away from desk']):
+                            # Keep auto-reply classification
+                            pass
+                        # Mixed business content - route to manual review
+                        elif len([term for term in business_terms if term in text_lower]) >= 2:
+                            return RuleResult("Manual Review", "Inquiry/Redirection", confidence, "Mixed business content", patterns)
+                    
+                    # Fix: Survey misclassification override
+                    if subcat == "Partial/Disputed Payment" and any(survey in text_lower for survey in survey_indicators):
+                        if not any(dispute in text_lower for dispute in enhanced_dispute_phrases):
+                            return RuleResult("Auto Reply (with/without info)", "Survey", confidence, "Survey override dispute", patterns)
+                    
+                    # Fix: Ticket context resolution (common issue)
+                    if subcat == "Created" and any(word in text_lower for word in ['resolved', 'closed', 'completed', 'solved']):
+                        return RuleResult("No Reply (with/without info)", "Resolved", confidence, "Ticket resolved (context fix)", patterns)
+                    
+                    # CRITICAL FIX: Complex business instructions vs format errors (Email 41)
+                    if subcat == "Invoice Errors (format mismatch)":
+                        complex_business_terms = [
+                            'routing instructions', 'business process', 'special handling', 'complex procedure',
+                            'multi step process', 'detailed process', 'workflow'
+                        ]
+                        if any(term in text_lower for term in complex_business_terms):
+                            return RuleResult("Manual Review", "Complex Queries", confidence, "Complex business instructions", patterns)
+                    
+                    # Fix: Documentation vs Invoice Request (common conflict)
+                    if subcat == "Request (No Info)" and any(word in text_lower for word in ['backup', 'documentation', 'supporting']):
+                        return RuleResult("Manual Review", "Inquiry/Redirection", confidence, "Documentation request (context fix)", patterns)
+                    
+                    # Fix: Invoice Request when actually providing payment proof
+                    if subcat == "Request (No Info)" and any(proof in text_lower for proof in ['was paid', 'see attachments', 'proof attached']):
+                        return RuleResult("Payments Claim", "Payment Confirmation", confidence, "Payment proof fix", patterns)
+                    
+                    # TRUST THE PATTERN MATCHER - this is the key fix!
                     return RuleResult(main_cat, subcat, confidence, f"Pattern match: {subcat}", patterns)
 
-            # STEP 15: Business content classification
-            business_terms = ["payment", "invoice", "account", "bill", "debt"]
-            business_count = sum(1 for term in business_terms if term in text_lower)
-            
-            if business_count >= 3:
-                return RuleResult("Manual Review", "Inquiry/Redirection", 0.70, 
-                                "Multiple business terms", ["business_content"])
-            
-            if "payment" in text_lower:
-                return RuleResult("Payments Claim", "Claims Paid (No Info)", 0.60, 
-                                "Payment-related", ["payment_related"])
-            elif "invoice" in text_lower:
-                return RuleResult("Invoices Request", "Request (No Info)", 0.60, 
-                                "Invoice-related", ["invoice_related"])
+            # STEP 3: ENHANCED NLP Analysis (if pattern matcher found nothing)
+            if analysis and analysis.topics:
+                for topic in analysis.topics:
+                    # Use EXACT sublabel names (fixed from your NLP mismatch)
+                    if topic == 'Partial/Disputed Payment':
+                        return RuleResult("Manual Review", "Partial/Disputed Payment", 0.82, "NLP detected dispute", ["nlp_dispute"])
+                    elif topic == 'Payment Confirmation':
+                        return RuleResult("Payments Claim", "Payment Confirmation", 0.82, "NLP payment proof", ["nlp_payment_proof"])
+                    elif topic == 'Claims Paid (No Info)':
+                        return RuleResult("Payments Claim", "Claims Paid (No Info)", 0.82, "NLP payment claim", ["nlp_payment_claim"])
+                    elif topic == 'Request (No Info)':
+                        return RuleResult("Invoices Request", "Request (No Info)", 0.82, "NLP invoice request", ["nlp_invoice_request"])
+                    elif topic == 'No Info/Autoreply':
+                        return RuleResult("Auto Reply (with/without info)", "No Info/Autoreply", 0.82, "NLP auto-reply", ["nlp_auto_reply"])
+                    elif topic == 'Processing Errors':
+                        return RuleResult("No Reply (with/without info)", "Processing Errors", 0.82, "NLP processing error", ["nlp_processing"])
+                    elif topic == 'Sales/Offers':
+                        return RuleResult("No Reply (with/without info)", "Sales/Offers", 0.82, "NLP sales/marketing", ["nlp_sales"])
+                    # ADDED: More NLP topic coverage
+                    elif topic == 'Survey':
+                        return RuleResult("Auto Reply (with/without info)", "Survey", 0.82, "NLP survey detected", ["nlp_survey"])
+                    elif topic == 'Return Date Specified':
+                        return RuleResult("Auto Reply (with/without info)", "Return Date Specified", 0.82, "NLP return date", ["nlp_return_date"])
+                    elif topic == 'Created':
+                        return RuleResult("No Reply (with/without info)", "Created", 0.82, "NLP ticket creation", ["nlp_created"])
 
-            # STEP 16: Final fallback
-            return RuleResult("No Reply (with/without info)", "General (Thank You)", 0.50, 
-                            "General fallback", ["general_fallback"])
+            # STEP 4: ENHANCED business fallbacks (MUCH more specific than before)
+            
+            # 4A: Clear payment claims (past tense only)
+            past_payment_phrases = ["already paid", "payment was made", "check was sent", "we paid", "been paid", "this was paid"]
+            if any(phrase in text_lower for phrase in past_payment_phrases):
+                # Exclude future payments
+                if not any(future in text_lower for future in ["will pay", "going to pay", "planning to pay"]):
+                    return RuleResult("Payments Claim", "Claims Paid (No Info)", 0.75, "Clear payment claim", ["payment_fallback"])
+            
+            # 4B: Enhanced dispute fallback (using enhanced patterns)
+            if any(phrase in text_lower for phrase in enhanced_dispute_phrases):
+                return RuleResult("Manual Review", "Partial/Disputed Payment", 0.80, "Enhanced dispute fallback", ["enhanced_dispute_fallback"])
+            
+            # 4C: Clear invoice requests (specific language, excluding proof)
+            clear_invoice_requests = ["send me the invoice", "need invoice copy", "provide outstanding invoices", "copies of invoices"]
+            if any(phrase in text_lower for phrase in clear_invoice_requests):
+                # Exclude documentation requests and payment proof
+                if not any(doc in text_lower for doc in ["backup documentation", "supporting documents", "was paid", "proof"]):
+                    return RuleResult("Invoices Request", "Request (No Info)", 0.75, "Clear invoice request", ["invoice_request_fallback"])
+            
+            # 4D: Clear system errors
+            clear_system_errors = ["processing error", "system unable to process", "delivery failed", "electronic invoice rejected"]
+            if any(phrase in text_lower for phrase in clear_system_errors):
+                return RuleResult("No Reply (with/without info)", "Processing Errors", 0.78, "Clear system error", ["system_error_fallback"])
+            
+            # 4E: ENHANCED Sales/Marketing fallback
+            if any(phrase in text_lower for phrase in enhanced_sales_patterns):
+                return RuleResult("No Reply (with/without info)", "Sales/Offers", 0.75, "Sales/marketing fallback", ["sales_fallback"])
+
+            # 4F: ENHANCED Ticket creation fallback - CRITICAL FIX (Emails 75, 77)
+            ticket_creation_phrases = [
+                'ticket created', 'case opened', 'new ticket', 'support request created',
+                'ticket has been opened', 'new case created', 'case number assigned',
+                'ticket submitted successfully', 'support request received'
+            ]
+            if any(phrase in text_lower for phrase in ticket_creation_phrases):
+                return RuleResult("No Reply (with/without info)", "Created", 0.78, "Ticket creation detected", ["ticket_creation_fallback"])
+
+            # STEP 5: Thread-specific logic (IMPROVED - not over-conservative)
+            if has_thread:
+                # For threads, use slightly more conservative approach but with better logic
+                
+                # Clear business threads that can be auto-classified
+                if any(phrase in text_lower for phrase in past_payment_phrases):
+                    return RuleResult("Payments Claim", "Claims Paid (No Info)", 0.70, "Thread payment claim", ["thread_payment"])
+                
+                if any(phrase in text_lower for phrase in enhanced_dispute_phrases):
+                    return RuleResult("Manual Review", "Partial/Disputed Payment", 0.70, "Thread dispute", ["thread_dispute"])
+                
+                if any(phrase in text_lower for phrase in clear_invoice_requests):
+                    # Check if it's actually payment proof in a thread
+                    if not any(proof in text_lower for proof in ['was paid', 'see attachments', 'proof']):
+                        return RuleResult("Invoices Request", "Request (No Info)", 0.70, "Thread invoice request", ["thread_invoice"])
+                
+                if any(phrase in text_lower for phrase in clear_system_errors):
+                    return RuleResult("No Reply (with/without info)", "Processing Errors", 0.70, "Thread system error", ["thread_system"])
+                
+                if any(phrase in text_lower for phrase in survey_indicators):
+                    return RuleResult("Auto Reply (with/without info)", "Survey", 0.70, "Thread survey", ["thread_survey"])
+                
+                # Enhanced sales detection in threads
+                if any(phrase in text_lower for phrase in enhanced_sales_patterns):
+                    return RuleResult("No Reply (with/without info)", "Sales/Offers", 0.70, "Thread sales/marketing", ["thread_sales"])
+                
+                # General business threads - but not everything goes to Manual Review!
+                business_terms = ["payment", "invoice", "account", "bill"]
+                if len([term for term in business_terms if term in text_lower]) >= 2:
+                    return RuleResult("Manual Review", "Inquiry/Redirection", 0.65, "Thread business communication", ["thread_business"])
+                else:
+                    # Non-business threads can be classified normally
+                    return RuleResult("No Reply (with/without info)", "General (Thank You)", 0.60, "Thread general", ["thread_general"])
+
+            # STEP 6: Final conservative fallback (MUCH more restrictive)
+            
+            # Only send to Manual Review if there are MULTIPLE business indicators
+            complex_business_indicators = ["payment", "invoice", "dispute", "collection", "debt", "billing"]
+            business_indicator_count = sum(1 for term in complex_business_indicators if term in text_lower)
+            
+            if business_indicator_count >= 3:  # Multiple business terms
+                return RuleResult("Manual Review", "Inquiry/Redirection", 0.60, "Multiple business terms", ["complex_business_fallback"])
+            elif business_indicator_count >= 1:  # Single business term - try to classify
+                if "payment" in text_lower:
+                    return RuleResult("Payments Claim", "Claims Paid (No Info)", 0.55, "Payment-related fallback", ["payment_related_fallback"])
+                elif "invoice" in text_lower:
+                    return RuleResult("Invoices Request", "Request (No Info)", 0.55, "Invoice-related fallback", ["invoice_related_fallback"])
+                else:
+                    return RuleResult("Manual Review", "Inquiry/Redirection", 0.55, "Business-related fallback", ["business_related_fallback"])
+            else:
+                # No business terms - likely notification or general
+                return RuleResult("No Reply (with/without info)", "General (Thank You)", 0.50, "General fallback", ["general_fallback"])
 
         except Exception as e:
             self.logger.error(f"Classification error: {e}")
-            return RuleResult("Manual Review", "Complex Queries", 0.30, 
-                            f"Error: {e}", ["error_fallback"])
+            return self._get_fallback_result(str(e))
         finally:
             self._update_metrics(start_time, success=True)
-
-    def _has_return_date(self, text: str) -> bool:
-        """FIXED: Check if text contains return date information"""
-        return_patterns = [
-            'return on', 'back on', 'returning', 'will be back', 'out until',
-            'return date', 'back monday', 'return monday', 'returning on'
-        ]
-        return any(pattern in text for pattern in return_patterns)
-
-    def _has_contact_person(self, text: str) -> bool:
-        """FIXED: Check if text contains contact person information"""        
-        # Contact person patterns (names)
-        contact_person_patterns = [
-            r'contact\s+[A-Z][a-z]+',              # "contact Jessica"
-            r'reach out to\s+[A-Z][a-z]+',         # "reach out to Jessica"  
-            r'please contact\s+[A-Z][a-z]+',       # "please contact Jessica"
-            r'urgent.*contact\s+[A-Z][a-z]+',      # "urgent contact Jessica"
-            r'contact\s+[A-Z][a-z]+\s+[A-Z][a-z]+' # "contact Jessica Moreno"
-        ]
-        
-        # Contact instructions (general)
-        contact_instructions = [
-            'call our office', 'contact our office', 'call the office',
-            'reach out to', 'contact us at', 'call us at', 'assistance contact'
-        ]
-        
-        # Check for specific contact persons
-        for pattern in contact_person_patterns:
-            if re.search(pattern, text):
-                return True
-        
-        # Check for general contact instructions
-        if any(instruction in text for instruction in contact_instructions):
-            return True
-        
-        return False
 
     def _classify_with_nlp_analysis(self, main_category: str, text: str, analysis: TextAnalysis) -> Optional[RuleResult]:
         """
@@ -526,6 +588,9 @@ class RuleEngine:
                 else:
                     return RuleResult("Manual Review", "Complex Queries", 0.75,
                                     f"Multiple financial terms: {financial_terms[:3]}", ["nlp_financial_complex"])
+
+            # Multiple business keywords (REMOVED - was too aggressive)
+            # This was sending too much to Manual Review
 
             return None
 

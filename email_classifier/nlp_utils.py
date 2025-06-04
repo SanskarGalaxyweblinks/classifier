@@ -36,11 +36,14 @@ class NLPProcessor:
         self.hierarchy_indicators = {
             # Manual Review sublabels - EXACT NAMES + ENHANCED PATTERNS
             'Partial/Disputed Payment': [
+                # Original patterns
                 'partial', 'dispute', 'contested', 'disagreement', 'refuse payment', 'billing error',
+                # Missing patterns from legal dispute analysis
                 'owe nothing', 'owe them nothing', 'consider this a scam', 'looks like a scam',
                 'is this legitimate', 'verify this debt', 'do not acknowledge', 'formally disputing',
                 'dispute this debt', 'billing is incorrect', 'not our responsibility', 'cease and desist',
                 'fdcpa', 'not properly billed', 'wrong entity', 'debt is disputed',
+                # Enhanced legal patterns
                 'cease and desist letter', 'legal notice', 'fdcpa violation', 'debt validation request',
                 'collection agency violation', 'fair debt collection', 'attorney correspondence',
                 'legal representation', 'debt collector harassment', 'validation of debt',
@@ -48,13 +51,16 @@ class NLPProcessor:
             ],
             'Invoice Receipt': [
                 'invoice attached', 'proof of invoice', 'invoice copy attached', 'invoice documentation attached',
+                # Enhanced proof patterns
                 'invoice receipt attached', 'copy of invoice attached for your records',
                 'attached invoice as proof', 'here is the invoice copy',
+                # Payment error documentation patterns
                 'payment made in error documentation', 'error payment proof', 'documentation for payment error',
                 'proof of payment error', 'attached payment documentation', 'payment error receipt'
             ],
             'Closure Notification': [
                 'business closed', 'company closed', 'out of business', 'ceased operations', 'bankruptcy',
+                # Enhanced closure patterns
                 'filed bankruptcy', 'bankruptcy protection', 'chapter 7', 'chapter 11'
             ],
             'Closure + Payment Due': [
@@ -63,29 +69,34 @@ class NLPProcessor:
             ],
             'External Submission': [
                 'invoice issue', 'submission failed', 'import failed', 'unable to import',
+                # Enhanced submission patterns
                 'documents not processed', 'submission unsuccessful', 'error importing invoice',
                 'invoice submission failed'
             ],
             'Invoice Errors (format mismatch)': [
                 'missing field', 'format mismatch', 'incomplete invoice', 'format error',
+                # Enhanced format patterns
                 'missing required field', 'invoice format error', 'field missing from invoice'
             ],
             'Inquiry/Redirection': [
                 'redirect', 'forward', 'contact instead', 'guidance needed', 'verify legitimate',
+                # Enhanced inquiry patterns
                 'reach out to', 'please check with', 'insufficient data to research',
                 'need guidance', 'please advise', 'what documentation needed',
-                'where to send payment', 'what bills', 'what is this for',
-                'what are they charging me for', 'backup documentation', 'supporting documents'
+                'where to send payment'
             ],
             'Complex Queries': [
                 'multiple issues', 'complex situation', 'legal communication', 'settlement',
+                # Enhanced complexity patterns
                 'settle for', 'settlement offer', 'negotiate payment', 'attorney',
                 'law firm', 'legal counsel', 'legal action',
+                # Settlement and legal arrangement patterns
                 'settlement arrangement', 'legal settlement agreement', 'payment settlement',
                 'settlement negotiation', 'legal arrangement', 'settlement terms',
                 'attorney settlement', 'legal resolution', 'settlement discussion',
                 'complex legal matter', 'legal consultation', 'attorney involvement',
                 'legal proceedings', 'court settlement', 'mediation settlement',
+                # Complex business routing patterns
                 'complex business instructions', 'routing instructions', 'complex routing',
                 'business process instructions', 'multi step process', 'complex procedure',
                 'detailed business process', 'special handling instructions', 'complex workflow'
@@ -94,9 +105,11 @@ class NLPProcessor:
             # No Reply - EXACT NAMES + ENHANCED PATTERNS
             'Sales/Offers': [
                 'sales offer', 'promotion', 'discount', 'special offer',
+                # Missing sales patterns from analysis
                 'prices increasing', 'price increase', 'limited time offer', 'hours left',
                 'sale ending', 'special pricing', 'promotional offer', 'exclusive deal',
                 'limited time', 'promotional pricing', 'discount offer',
+                # Payment plan and sales discussion patterns
                 'payment plan options', 'payment plan discussion', 'installment plan',
                 'payment arrangement offer', 'flexible payment options', 'payment terms discussion',
                 'financing options', 'payment schedule options', 'payment plan available',
@@ -104,11 +117,13 @@ class NLPProcessor:
             ],
             'System Alerts': [
                 'system alert', 'notification', 'maintenance',
+                # Enhanced system patterns
                 'system notification', 'automated notification', 'security alert',
                 'maintenance notification'
             ],
             'Processing Errors': [
                 'processing error', 'failed to process', 'delivery failed',
+                # Enhanced processing error patterns
                 'cannot be processed', 'electronic invoice rejected', 'request couldn\'t be created',
                 'system unable to process', 'mail delivery failed', 'email bounced'
             ],
@@ -118,12 +133,15 @@ class NLPProcessor:
             ],
             'General (Thank You)': [
                 'thank you', 'received your message', 'acknowledgment',
+                # Enhanced thank you patterns
                 'thank you for your email', 'thanks for contacting', 'still reviewing',
                 'currently reviewing', 'under review', 'we are reviewing', 'for your records'
             ],
             'Created': [
                 'ticket created', 'case created', 'new ticket', 'case opened',
+                # Enhanced creation patterns
                 'new ticket opened', 'support request created', 'case has been created',
+                # Additional ticket creation patterns
                 'ticket has been opened', 'new case created', 'support ticket opened',
                 'case number assigned', 'ticket number assigned', 'new support case',
                 'request has been submitted', 'ticket submitted successfully',
@@ -131,6 +149,7 @@ class NLPProcessor:
             ],
             'Resolved': [
                 'ticket resolved', 'case resolved', 'case closed', 'completed',
+                # Enhanced resolution patterns
                 'ticket has been resolved', 'marked as resolved', 'status resolved'
             ],
             'Open': [
@@ -141,6 +160,7 @@ class NLPProcessor:
             # Invoices Request - EXACT NAME + ENHANCED PATTERNS
             'Request (No Info)': [
                 'invoice request', 'need invoice', 'send invoice', 'provide invoice',
+                # Enhanced invoice request patterns (but excluding proof scenarios)
                 'send me the invoice', 'provide the invoice', 'need invoice copy',
                 'outstanding invoices owed', 'copies of any invoices',
                 'send invoices that are due', 'provide outstanding invoices'
@@ -149,20 +169,21 @@ class NLPProcessor:
             # Payments Claim - EXACT NAMES + ENHANCED PATTERNS
             'Claims Paid (No Info)': [
                 'already paid', 'payment made', 'check sent', 'we paid',
+                # Enhanced payment claim patterns
                 'payment was made', 'bill was paid', 'payment was sent', 'payment completed',
-                'this was paid', 'account paid', 'made payment', 'been paid',
-                'i mailed a check', 'check was mailed'
+                'this was paid', 'account paid', 'made payment', 'been paid'
             ],
             'Payment Confirmation': [
-                'see attachments', 'proof attached', 'payment confirmation attached',
-                'receipt attached', 'confirmation attached', 'attached payment',
-                'invoice was paid see attachments', 'here is proof of payment',
-                'payment receipt number', 'wire transfer confirmation',
-                'check number', 'transaction id', 'wire confirmation', 'batch number',
-                'paid via transaction number', 'ach confirmation number'
+                'payment confirmation', 'proof of payment', 'payment receipt', 'eft#',
+                # Enhanced payment proof patterns
+                'invoice was paid see attachments', 'payment confirmation attached',
+                'check number', 'transaction id', 'here is proof of payment',
+                'payment receipt attached', 'wire confirmation', 'batch number',
+                'paid via transaction number'
             ],
             'Payment Details Received': [
                 'payment details', 'payment scheduled', 'payment timeline',
+                # Enhanced payment details patterns
                 'payment will be sent', 'payment being processed', 'check will be mailed',
                 'in process of issuing payment', 'invoices being processed for payment',
                 'will pay this online', 'working on payment', 'need time to pay'
@@ -171,17 +192,21 @@ class NLPProcessor:
             # Auto Reply - EXACT NAMES + ENHANCED PATTERNS
             'With Alternate Contact': [
                 'alternate contact', 'emergency contact', 'contact me at',
+                # Enhanced contact patterns
                 'out of office contact', 'emergency contact number', 'urgent matters contact',
                 'immediate assistance contact'
             ],
             'No Info/Autoreply': [
                 'out of office', 'automatic reply', 'auto-reply',
+                # Enhanced auto-reply patterns
                 'currently out', 'away from desk', 'on vacation', 'limited access to email',
                 'do not reply', 'automated response'
             ],
             'Return Date Specified': [
                 'return date', 'back on', 'returning', 'until',
+                # Enhanced return date patterns
                 'out of office until', 'will be back', 'returning on',
+                # Comprehensive return date patterns
                 'return to office on', 'back in office on', 'returning to work on',
                 'will return on', 'back from vacation on', 'return date is',
                 'expected return date', 'returning from leave on', 'back on monday',
@@ -191,36 +216,43 @@ class NLPProcessor:
             ],
             'Survey': [
                 'survey', 'feedback', 'questionnaire', 'rate',
+                # Enhanced survey patterns
                 'feedback request', 'rate our service', 'customer satisfaction',
                 'take our survey', 'your feedback is important', 'please rate'
             ],
             'Redirects/Updates (property changes)': [
                 'property manager', 'contact changed', 'no longer with',
+                # Enhanced redirect patterns
                 'no longer employed', 'department changed', 'property manager changed'
             ]
         }
-
-        # Enhanced financial keywords
+        
+        # ENHANCED financial keywords with missed patterns
         self.financial_keywords = {
             'payment_terms': [
                 'payment', 'pay', 'paid', 'remittance', 'check', 'wire', 'transfer',
+                # Enhanced payment terms
                 'settlement', 'eft', 'ach', 'electronic payment', 'credit card payment'
             ],
             'invoice_terms': [
                 'invoice', 'bill', 'statement', 'receipt',
+                # Enhanced invoice terms
                 'billing', 'charge', 'fee'
             ],
             'amount_terms': [
                 'amount', 'total', 'sum', 'balance', 'due',
+                # Enhanced amount terms
                 'cost', 'price', 'fee', 'charge'
             ],
             'dispute_terms': [
                 'dispute', 'disagreement', 'contested', 'challenge',
+                # Enhanced dispute terms from analysis
                 'owe nothing', 'scam', 'not legitimate', 'not our debt', 'refuse payment',
                 'cease and desist', 'fdcpa', 'legal action', 'attorney', 'debt validation'
             ],
             'closure_terms': [
                 'closed', 'closure', 'terminated', 'ceased', 'dissolved',
+                # Enhanced closure terms
                 'bankruptcy', 'out of business', 'liquidated'
             ],
             'sales_terms': [
@@ -233,84 +265,125 @@ class NLPProcessor:
             ],
             'error_terms': [
                 'error', 'mistake', 'incorrect', 'wrong', 'failed', 'issue', 'problem'
-            ],
-            'customer_question_terms': [
-                'what bills', 'what is this for', 'what are they charging me for',
-                'did you receive', 'have you received', 'is there paperwork',
-                'what do i owe', 'what am i being charged for'
             ]
         }
-
-        # Customer question indicators (NEW - critical for fixing misclassifications)
-        self.customer_question_indicators = {
-            'direct_questions': [
-                'what bills?', 'what is this for?', 'what are they charging me for?',
-                'did you receive my check?', 'have you received payment?',
-                'is there any type of paperwork?', 'what do i owe?'
+        
+        # ENHANCED sentiment indicators
+        self.positive_words = [
+            'thank', 'good', 'great', 'appreciate', 'excellent', 'pleased', 'satisfied',
+            # Enhanced positive words
+            'wonderful', 'fantastic', 'amazing', 'perfect', 'outstanding'
+        ]
+        self.negative_words = [
+            'error', 'issue', 'problem', 'wrong', 'failed', 'dispute', 'concern',
+            # Enhanced negative words from analysis
+            'scam', 'fraud', 'illegitimate', 'incorrect', 'unacceptable', 'terrible'
+        ]
+        
+        # ENHANCED urgency indicators
+        self.urgency_keywords = [
+            'urgent', 'immediate', 'asap', 'critical', 'deadline', 'today', 'now', 'quickly',
+            # Enhanced urgency keywords
+            'emergency', 'rush', 'priority', 'time sensitive', 'expires'
+        ]
+        
+        # ENHANCED action indicators
+        self.action_keywords = [
+            'please', 'kindly', 'request', 'need', 'send', 'provide', 'confirm', 'verify',
+            # Enhanced action keywords
+            'submit', 'forward', 'respond', 'reply', 'contact', 'call', 'email'
+        ]
+        
+        # ENHANCED complexity indicators
+        self.complexity_keywords = [
+            'multiple', 'various', 'complex', 'detailed', 'several', 'numerous',
+            # Enhanced complexity keywords
+            'complicated', 'intricate', 'extensive', 'comprehensive', 'elaborate',
+            'settlement', 'legal', 'attorney', 'routing instructions', 'business process'
+        ]
+        
+        # Dispute intensity keywords (helps with confidence scoring)
+        self.dispute_intensity_keywords = {
+            'high_intensity': [
+                'scam', 'fraud', 'cease and desist', 'fdcpa', 'attorney', 'legal action',
+                'debt validation', 'collection agency violation', 'legal notice'
             ],
-            'payment_inquiries': [
-                'did you receive my check', 'have you received payment',
-                'check was mailed', 'i mailed a check', 'payment was sent'
+            'medium_intensity': [
+                'dispute', 'disagree', 'contest', 'owe nothing', 'not legitimate',
+                'refuse payment', 'billing incorrect', 'not our responsibility'
             ],
-            'general_inquiries': [
-                'what documentation needed', 'where to send payment',
-                'backup documentation', 'supporting documents'
+            'low_intensity': [
+                'question', 'unclear', 'verify', 'confirm', 'looks like', 'is this'
             ]
         }
-
-        # Enhanced proof validation indicators
+        
+        # Proof indicators (helps distinguish requests vs confirmations)
         self.proof_indicators = {
             'providing_proof': [
                 'see attachments', 'attached', 'proof attached', 'here is proof', 
                 'confirmation attached', 'documentation attached', 'receipt attached',
-                'was paid see attachments', 'payment confirmation attached',
-                'check number', 'transaction id', 'wire confirmation', 'batch number'
+                'was paid see attachments', 'payment confirmation attached'
             ],
             'requesting_proof': [
                 'send me', 'provide', 'need copy', 'share', 'forward', 'need invoice',
                 'provide invoice', 'send invoice', 'copies of invoices'
-            ],
-            'future_payment_indicators': [
-                'will pay', 'going to pay', 'payment will be sent', 'check will be mailed',
-                'payment being processed', 'working on payment', 'need time to pay'
             ]
         }
-
-        # Auto-reply subject indicators (NEW - critical for subject-based detection)
-        self.auto_reply_subject_indicators = [
-            'automatic reply:', 'auto-reply:', 'automatic reply', 'auto reply',
-            'out of office:', 'ooo:', 'away message'
-        ]
-
-        # Enhanced sentiment indicators
-        self.positive_words = [
-            'thank', 'good', 'great', 'appreciate', 'excellent', 'pleased', 'satisfied',
-            'wonderful', 'fantastic', 'amazing', 'perfect', 'outstanding'
-        ]
-
-        self.negative_words = [
-            'error', 'issue', 'problem', 'wrong', 'failed', 'dispute', 'concern',
-            'scam', 'fraud', 'illegitimate', 'incorrect', 'unacceptable', 'terrible'
-        ]
-
-        # Enhanced urgency indicators
-        self.urgency_keywords = [
-            'urgent', 'immediate', 'asap', 'critical', 'deadline', 'today', 'now', 'quickly',
-            'emergency', 'rush', 'priority', 'time sensitive', 'expires'
-        ]
-
-        # Enhanced action indicators
-        self.action_keywords = [
-            'please', 'kindly', 'request', 'need', 'send', 'provide', 'confirm', 'verify',
-            'submit', 'forward', 'respond', 'reply', 'contact', 'call', 'email'
-        ]
-
-        # Enhanced complexity indicators
-        self.complexity_keywords = [
-            'multiple', 'various', 'complex', 'detailed', 'several', 'numerous',
-            'complicated', 'intricate', 'extensive', 'comprehensive', 'elaborate',
-            'settlement', 'legal', 'attorney', 'routing instructions', 'business process'
-        ]
+        
+        # Return date indicators (helps with auto-reply classification)
+        self.return_date_indicators = {
+            'specific_date': [
+                'return on', 'back on', 'returning on', 'will be back on',
+                'return date is', 'expected return', 'back monday', 'return monday'
+            ],
+            'relative_date': [
+                'back next week', 'return next week', 'out until', 'away until',
+                'return after', 'back after', 'returning after'
+            ],
+            'indefinite': [
+                'return date unknown', 'indefinite leave', 'extended absence'
+            ]
+        }
+        
+        # Business instruction indicators (helps distinguish complex queries)
+        self.business_instruction_indicators = {
+            'routing_instructions': [
+                'routing instructions', 'business process', 'special handling',
+                'complex procedure', 'workflow', 'process instructions'
+            ],
+            'complex_business': [
+                'multi step process', 'detailed process', 'complex business',
+                'business instructions', 'special instructions'
+            ]
+        }
+        
+        # Sales and marketing indicators (enhanced detection)
+        self.sales_marketing_indicators = {
+            'promotional': [
+                'special offer', 'limited time', 'promotional offer', 'discount offer',
+                'exclusive deal', 'sale ending', 'hours left', 'prices increasing'
+            ],
+            'payment_plans': [
+                'payment plan', 'installment plan', 'financing options', 'flexible payment',
+                'payment arrangement', 'payment terms discussion', 'monthly payment'
+            ]
+        }
+        
+        # Ticket and case indicators (enhanced detection)
+        self.ticket_case_indicators = {
+            'creation': [
+                'ticket created', 'case created', 'new ticket', 'case opened',
+                'support request created', 'ticket has been opened', 'case number assigned'
+            ],
+            'resolution': [
+                'ticket resolved', 'case resolved', 'case closed', 'completed',
+                'marked as resolved', 'status resolved', 'ticket has been resolved'
+            ],
+            'status_update': [
+                'ticket open', 'case open', 'still pending', 'case pending',
+                'under review', 'being processed'
+            ]
+        }
     
     def analyze_text(self, text: str) -> TextAnalysis:
         """

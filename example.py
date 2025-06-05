@@ -9,7 +9,7 @@ import json
 import time
 import os
 from typing import Dict, List, Any, Optional
-from email_classifier.classifier import EmailClassifier
+from classifier import EmailClassifier
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)

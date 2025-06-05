@@ -75,91 +75,97 @@ class RuleEngine:
         }
 
     def _initialize_thread_patterns(self) -> None:
-        """Initialize thread-specific patterns for the 3 main categories."""
+        """Initialize thread-specific patterns by REUSING existing patterns from pattern_matcher and nlp_processor."""
         
-        # THREAD-SPECIFIC PATTERNS FOR 3 MAIN CATEGORIES
+        # REUSE PATTERNS FROM EXISTING COMPONENTS - NO DUPLICATION!
         self.thread_patterns = {
             "Manual Review": {
-                # Disputes (highest priority in threads)
-                "dispute_patterns": [
-                    'dispute', 'disputing', 'owe nothing', 'owe them nothing', 'scam',
-                    'fdcpa', 'cease and desist', 'do not acknowledge', 'billing incorrect',
-                    'not our responsibility', 'contested payment', 'refuse payment',
-                    'settlement', 'attorney', 'legal action', 'debt validation'
-                ],
-                # Complex business (common in threads)
-                "complex_patterns": [
-                    'routing instructions', 'complex business', 'special handling',
-                    'detailed process', 'workflow', 'business process', 'legal',
-                    'attorney correspondence', 'settlement arrangement'
-                ],
-                # Business closure (often in threads)
-                "closure_patterns": [
-                    'business closed', 'filed bankruptcy', 'out of business',
-                    'ceased operations', 'chapter 7', 'chapter 11'
-                ],
-                # Invoice proof/documentation (threads often have this)
-                "invoice_proof_patterns": [
-                    'invoice receipt attached', 'proof of invoice', 'invoice copy attached',
-                    'payment error documentation', 'error payment proof'
-                ]
+                # Get dispute patterns from pattern matcher
+                "dispute_patterns": self._get_patterns_from_matcher("Manual Review", "Partial/Disputed Payment"),
+                # Get complex patterns from pattern matcher  
+                "complex_patterns": self._get_patterns_from_matcher("Manual Review", "Complex Queries"),
+                # Get closure patterns from pattern matcher
+                "closure_patterns": self._get_patterns_from_matcher("Manual Review", "Closure Notification"),
+                # Get invoice proof patterns from pattern matcher
+                "invoice_proof_patterns": self._get_patterns_from_matcher("Manual Review", "Invoice Receipt")
             },
             
             "Payments Claim": {
-                # Payment claims (very common in threads)
-                "claim_patterns": [
-                    'already paid', 'payment was made', 'check was sent', 'we paid',
-                    'account paid', 'this was paid', 'been paid', 'payment completed'
-                ],
-                # Payment proof (common in thread responses)
-                "proof_patterns": [
-                    'proof of payment', 'payment confirmation', 'check number',
-                    'transaction id', 'eft#', 'wire confirmation', 'receipt attached',
-                    'payment receipt', 'ach payment id', 'last 4 digits'
-                ],
-                # Payment details (future/pending payments)
-                "details_patterns": [
-                    'payment will be sent', 'payment being processed', 'working on payment',
-                    'payment scheduled', 'check will be mailed', 'payment in progress'
-                ]
+                # Get payment claim patterns from pattern matcher
+                "claim_patterns": self._get_patterns_from_matcher("Payments Claim", "Claims Paid (No Info)"),
+                # Get payment proof patterns from pattern matcher
+                "proof_patterns": self._get_patterns_from_matcher("Payments Claim", "Payment Confirmation"),
+                # Get payment details patterns from pattern matcher
+                "details_patterns": self._get_patterns_from_matcher("Payments Claim", "Payment Details Received")
             },
             
             "Invoices Request": {
-                # Invoice requests (very common in threads)
-                "request_patterns": [
-                    'send me the invoice', 'need invoice copy', 'provide outstanding invoices',
-                    'copies of invoices', 'share invoice', 'forward invoice',
-                    'invoice request', 'need invoice documentation', 'send invoices'
-                ]
+                # Get invoice request patterns from pattern matcher
+                "request_patterns": self._get_patterns_from_matcher("Invoices Request", "Request (No Info)")
             }
         }
 
     def _initialize_noreply_patterns(self) -> None:
-        """Initialize no-reply sender patterns and thread edge cases."""
+        """Initialize no-reply sender patterns and thread edge cases by REUSING existing patterns."""
         
-        # NO-REPLY SENDER PATTERNS
+        # NO-REPLY SENDER PATTERNS - Keep these simple ones here since they're sender-specific
         self.noreply_patterns = [
             r'noreply@', r'no-reply@', r'donotreply@', r'do-not-reply@',
             r'notifications@', r'system@', r'alerts@', r'automated@',
             r'support-noreply@', r'billing-noreply@'
         ]
         
-        # THREAD EDGE CASE PATTERNS
+        # REUSE EDGE CASE PATTERNS FROM NLP PROCESSOR
         self.thread_edge_patterns = {
-            "out_of_office": [
-                'out of office', 'away from desk', 'on vacation', 'automatic reply',
-                'auto-reply', 'currently out', 'away from the office', 'on leave'
-            ],
-            "no_reply_warnings": [
-                'do not reply', 'this is a no reply', 'please do not reply',
-                'this mailbox is not monitored', 'automated message',
-                'this is an automated', 'system generated'
-            ],
-            "contact_changes": [
-                'no longer employed', 'contact changed', 'property manager changed',
-                'no longer manage', 'please contact', 'reach out to'
-            ]
+            "out_of_office": self._get_nlp_patterns("Auto Reply", "OOO"),
+            "no_reply_warnings": self._get_nlp_patterns("No Reply", "System"),
+            "contact_changes": self._get_nlp_patterns("Auto Reply", "Contact Changes")
         }
+
+    def _get_patterns_from_matcher(self, main_category: str, subcategory: str) -> List[str]:
+        """Extract patterns from existing PatternMatcher to avoid duplication."""
+        try:
+            if hasattr(self.pattern_matcher, 'patterns') and main_category in self.pattern_matcher.patterns:
+                if subcategory in self.pattern_matcher.patterns[main_category]:
+                    # Convert regex patterns to simple strings for thread matching
+                    patterns = self.pattern_matcher.patterns[main_category][subcategory]
+                    # Remove regex word boundaries and convert to simple strings
+                    simple_patterns = []
+                    for pattern in patterns:
+                        if isinstance(pattern, str):
+                            # Remove regex syntax like \b and convert to simple string
+                            clean_pattern = pattern.replace(r'\b', '').replace(r'.*', ' ').strip()
+                            if clean_pattern:
+                                simple_patterns.append(clean_pattern)
+                    return simple_patterns
+            return []
+        except Exception as e:
+            self.logger.warning(f"Could not extract patterns for {main_category}/{subcategory}: {e}")
+            return []
+
+    def _get_nlp_patterns(self, category_type: str, pattern_type: str) -> List[str]:
+        """Extract patterns from NLP processor to avoid duplication."""
+        try:
+            if hasattr(self.nlp_processor, 'hierarchy_indicators'):
+                # Map to actual NLP sublabel names
+                nlp_mapping = {
+                    ("Auto Reply", "OOO"): ["No Info/Autoreply", "Return Date Specified", "With Alternate Contact"],
+                    ("No Reply", "System"): ["System Alerts", "Processing Errors"],
+                    ("Auto Reply", "Contact Changes"): ["Redirects/Updates (property changes)"]
+                }
+                
+                sublabels = nlp_mapping.get((category_type, pattern_type), [])
+                all_patterns = []
+                
+                for sublabel in sublabels:
+                    if sublabel in self.nlp_processor.hierarchy_indicators:
+                        all_patterns.extend(self.nlp_processor.hierarchy_indicators[sublabel])
+                
+                return all_patterns
+            return []
+        except Exception as e:
+            self.logger.warning(f"Could not extract NLP patterns for {category_type}/{pattern_type}: {e}")
+            return []
 
     def classify_sublabel(
         self,
@@ -305,80 +311,101 @@ class RuleEngine:
             return RuleResult("Manual Review", "Complex Queries", 0.30, f"Error: {e}", ["error_fallback"])
 
     def _classify_thread_manual_review(self, text: str) -> Optional[RuleResult]:
-        """Classify thread emails for Manual Review category."""
+        """Classify thread emails for Manual Review category using EXISTING patterns."""
         
         patterns = self.thread_patterns["Manual Review"]
         
-        # Disputes (highest priority)
-        dispute_matches = sum(1 for pattern in patterns["dispute_patterns"] if pattern in text)
+        # Use pattern matcher directly for better accuracy
+        if hasattr(self.pattern_matcher, 'match_text'):
+            main_cat, subcat, confidence, matched_patterns = self.pattern_matcher.match_text(text)
+            
+            # If pattern matcher found Manual Review with good confidence, use it
+            if main_cat == "Manual Review" and confidence >= 0.70:
+                return RuleResult("Manual Review", subcat, confidence + 0.10,  # Thread boost
+                                f"Thread + Pattern: {subcat}", ["thread_pattern_match"] + matched_patterns)
+        
+        # Fallback: Simple pattern checking if pattern matcher didn't work
+        dispute_matches = sum(1 for pattern in patterns.get("dispute_patterns", []) if pattern in text)
         if dispute_matches >= 1:
-            confidence = min(0.90 + (dispute_matches * 0.02), 0.98)
+            confidence = min(0.85 + (dispute_matches * 0.02), 0.95)
             return RuleResult("Manual Review", "Partial/Disputed Payment", confidence,
                             "Thread: Dispute detected", ["thread_dispute"])
         
-        # Invoice proof/documentation
-        invoice_proof_matches = sum(1 for pattern in patterns["invoice_proof_patterns"] if pattern in text)
+        invoice_proof_matches = sum(1 for pattern in patterns.get("invoice_proof_patterns", []) if pattern in text)
         if invoice_proof_matches >= 1:
-            return RuleResult("Manual Review", "Invoice Receipt", 0.88,
+            return RuleResult("Manual Review", "Invoice Receipt", 0.85,
                             "Thread: Invoice proof provided", ["thread_invoice_proof"])
         
-        # Business closure
-        closure_matches = sum(1 for pattern in patterns["closure_patterns"] if pattern in text)
+        closure_matches = sum(1 for pattern in patterns.get("closure_patterns", []) if pattern in text)
         if closure_matches >= 1:
-            # Check if payment is mentioned with closure
             if any(payment in text for payment in ['outstanding payment', 'payment due', 'owed']):
-                return RuleResult("Manual Review", "Closure + Payment Due", 0.90,
+                return RuleResult("Manual Review", "Closure + Payment Due", 0.87,
                                 "Thread: Closure with payment due", ["thread_closure_payment"])
             else:
-                return RuleResult("Manual Review", "Closure Notification", 0.88,
+                return RuleResult("Manual Review", "Closure Notification", 0.85,
                                 "Thread: Business closure", ["thread_closure"])
         
-        # Complex business patterns
-        complex_matches = sum(1 for pattern in patterns["complex_patterns"] if pattern in text)
+        complex_matches = sum(1 for pattern in patterns.get("complex_patterns", []) if pattern in text)
         if complex_matches >= 1:
-            return RuleResult("Manual Review", "Complex Queries", 0.85,
+            return RuleResult("Manual Review", "Complex Queries", 0.82,
                             "Thread: Complex business content", ["thread_complex"])
         
         return None
 
     def _classify_thread_payments(self, text: str) -> Optional[RuleResult]:
-        """Classify thread emails for Payments Claim category."""
+        """Classify thread emails for Payments Claim category using EXISTING patterns."""
         
+        # Use pattern matcher directly for better accuracy
+        if hasattr(self.pattern_matcher, 'match_text'):
+            main_cat, subcat, confidence, matched_patterns = self.pattern_matcher.match_text(text)
+            
+            # If pattern matcher found Payments Claim with good confidence, use it
+            if main_cat == "Payments Claim" and confidence >= 0.70:
+                return RuleResult("Payments Claim", subcat, confidence + 0.10,  # Thread boost
+                                f"Thread + Pattern: {subcat}", ["thread_pattern_match"] + matched_patterns)
+        
+        # Fallback: Use extracted patterns
         patterns = self.thread_patterns["Payments Claim"]
         
-        # Payment proof (highest confidence)
-        proof_matches = sum(1 for pattern in patterns["proof_patterns"] if pattern in text)
+        proof_matches = sum(1 for pattern in patterns.get("proof_patterns", []) if pattern in text)
         if proof_matches >= 1:
-            confidence = min(0.88 + (proof_matches * 0.02), 0.95)
+            confidence = min(0.85 + (proof_matches * 0.02), 0.92)
             return RuleResult("Payments Claim", "Payment Confirmation", confidence,
                             "Thread: Payment proof provided", ["thread_payment_proof"])
         
-        # Payment details (future/pending)
-        details_matches = sum(1 for pattern in patterns["details_patterns"] if pattern in text)
+        details_matches = sum(1 for pattern in patterns.get("details_patterns", []) if pattern in text)
         if details_matches >= 1:
-            return RuleResult("Payments Claim", "Payment Details Received", 0.85,
+            return RuleResult("Payments Claim", "Payment Details Received", 0.82,
                             "Thread: Payment details received", ["thread_payment_details"])
         
-        # Payment claims (no proof)
-        claim_matches = sum(1 for pattern in patterns["claim_patterns"] if pattern in text)
+        claim_matches = sum(1 for pattern in patterns.get("claim_patterns", []) if pattern in text)
         if claim_matches >= 1:
-            confidence = min(0.82 + (claim_matches * 0.02), 0.90)
+            confidence = min(0.80 + (claim_matches * 0.02), 0.87)
             return RuleResult("Payments Claim", "Claims Paid (No Info)", confidence,
                             "Thread: Payment claim", ["thread_payment_claim"])
         
         return None
 
     def _classify_thread_invoices(self, text: str) -> Optional[RuleResult]:
-        """Classify thread emails for Invoices Request category."""
+        """Classify thread emails for Invoices Request category using EXISTING patterns."""
         
+        # Use pattern matcher directly for better accuracy
+        if hasattr(self.pattern_matcher, 'match_text'):
+            main_cat, subcat, confidence, matched_patterns = self.pattern_matcher.match_text(text)
+            
+            # If pattern matcher found Invoices Request with good confidence, use it
+            if main_cat == "Invoices Request" and confidence >= 0.70:
+                return RuleResult("Invoices Request", subcat, confidence + 0.10,  # Thread boost
+                                f"Thread + Pattern: {subcat}", ["thread_pattern_match"] + matched_patterns)
+        
+        # Fallback: Use extracted patterns
         patterns = self.thread_patterns["Invoices Request"]
+        request_matches = sum(1 for pattern in patterns.get("request_patterns", []) if pattern in text)
         
-        # Invoice requests
-        request_matches = sum(1 for pattern in patterns["request_patterns"] if pattern in text)
         if request_matches >= 1:
             # Make sure it's not providing proof (which would be Manual Review)
             if not any(proof in text for proof in ['attached', 'proof', 'documentation', 'receipt']):
-                confidence = min(0.85 + (request_matches * 0.02), 0.92)
+                confidence = min(0.82 + (request_matches * 0.02), 0.89)
                 return RuleResult("Invoices Request", "Request (No Info)", confidence,
                                 "Thread: Invoice request", ["thread_invoice_request"])
         

@@ -331,7 +331,7 @@ class EnhancedCSVEmailProcessor:
 def main():
     """Main function with enhanced processing"""
     # Update this path to your CSV file
-    csv_file = "/Users/gwl/Desktop/new_project/TESTING/new_start/clean_emails_20250604_185156.csv"
+    csv_file = "/Users/gwl/Desktop/new_project/TESTING/new_start/clean_emails_20250605_123847.csv"
     
     try:
         processor = EnhancedCSVEmailProcessor(csv_file)

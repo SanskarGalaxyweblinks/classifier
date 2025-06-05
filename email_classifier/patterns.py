@@ -43,6 +43,10 @@ class PatternMatcher:
                     r"\bcontested\s+payment\b", r"\brefuse\s+to\s+pay\b", r"\bunauthorized\s+charge\b",
                     r"\bfraudulent\s+charge\b", r"\bincorrect\s+billing\b", r"\bincorrect\s+amount\b",
                     r"\bincorrect\s+payment\b", r"\bincorrect\s+invoice\b", r"\bincorrect\s+statement\b",
+                    # ENHANCED: Missing dispute patterns from analysis
+                    r"\bno\s+record\s+of\s+any\s+charge\b", r"\bhavent?\s+done\s+business\s+with\b",
+                    r"\berror\s+on\s+your\s+end\b", r"\bwrite\s+off\s+this\s+amount\b", 
+                    r"\bcharge\s+is\s+bogus\b", r"\bthis\s+is\s+an?\s+error\b",
                     
                     # ENHANCED: Add specific dispute patterns (no conflicts)
                     r"\bwe\s+do\s+not\s+owe\s+.*amount\b",  # More specific than just "do not owe"
@@ -197,6 +201,10 @@ class PatternMatcher:
                     r"\bpayment\s+scheduled\s+for\b",  # More specific
                     r"\bwill\s+pay\s+.*online\s+.*\b",  # More specific
                     r"\binvoices?\s+being\s+processed\s+for\s+payment\b",
+                    # ENHANCED: Missing future payment patterns  
+                    r"\bwill\s+make\s+payment\s+from\s+next\s+week\b", 
+                    r"\bcan\s+we\s+do\s+the\s+first\s+payment\s+this\s+upcoming\b",
+                    r"\bpayment\s+is\s+awaiting\s+information\b", r"\bgoing\s+to\s+pay\b",
                     
                     # ENHANCED: Specific future payment patterns (avoid conflicts)
                     r"\bi\s+will\s+pay\s+the\s+remainder\s+after\b",  # Very specific
@@ -217,7 +225,10 @@ class PatternMatcher:
                     r"\bfor\s+urgent\s+matters\s+contact\b",
                     r"\bimmediate\s+assistance\s+contact\b",
                     r"\breach\s+me\s+at\s+\d+\b",  # With phone number
-                    r"\bcall\s+me\s+at\s+\d+\b"  # With phone number
+                    r"\bcall\s+me\s+at\s+\d+\b",  # With phone number
+                    r"\bcontact\s+me\s+at\s+[\d\-\.\s\(\)]+\b", # Enhanced phone detection
+                    r"\bplease\s+contact\s+.*@.*\.com\b",        # Email contact  
+                    r"\bcontact\s+.*at\s+[\d\-\.\s\(\)]+\b",     # Phone with formats
                 ],
 
                 "Return Date Specified": [
@@ -232,6 +243,8 @@ class PatternMatcher:
                     r"\bwill\s+be\s+out\s+of\s+.*office\s+.*monday\b",  # Specific pattern
                     r"\breturn\s+.*monday\b",  # return Monday
                     r"\bback\s+.*monday\b"     # back Monday
+                    r"\bout\s+from\s+\d+\/\d+\/\d+\s+to\s+\d+\/\d+\/\d+\b", # Email #36 format
+                    r"\bout\s+.*until\s+\w+day\b", r"\bback\s+.*\w+day\b"
                 ],
 
                 "No Info/Autoreply": [
@@ -243,7 +256,9 @@ class PatternMatcher:
                     r"\bcurrently\s+out\b",
                     r"\blimited\s+access\s+to\s+email\b",
                     r"\bdo\s+not\s+reply\s+to\s+this\s+email\b",
-                    r"\btemporarily\s+unavailable\b"
+                    r"\btemporarily\s+unavailable\b",
+                    r"\battending\s+.*meetings\b", r"\bcurrently\s+attending\b", # Email #165
+                    r"\blimited\s+email\s+access\b"
                 ],
 
                 "Survey": [

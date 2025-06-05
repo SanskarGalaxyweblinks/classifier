@@ -6,7 +6,7 @@ Removed General (Thank You) and simplified patterns
 
 import logging
 import re
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any
 from dataclasses import dataclass
 import unicodedata
 
@@ -36,7 +36,7 @@ class NLPProcessor:
         self.logger.info("✅ Clean NLP Processor initialized")
 
     def _initialize_patterns(self) -> None:
-        """Initialize essential patterns aligned with hierarchy."""
+        """Initialize essential patterns aligned with hierarchy - ENHANCED VERSION."""
         
         # Key hierarchy indicators (removed General Thank You)
         self.hierarchy_indicators = {
@@ -52,7 +52,21 @@ class NLPProcessor:
                 
                 # Dispute intensity patterns
                 'contested payment', 'refuse payment', 'challenge payment', 'billing error dispute',
-                'not properly billed', 'wrong entity', 'debt is disputed', 'verify this debt'
+                'not properly billed', 'wrong entity', 'debt is disputed', 'verify this debt',
+                
+                # ENHANCED: Missing dispute patterns from misclassified emails
+                'no record of any charge', 'havent done business with', 'haven\'t done business with',
+                'error on your end', 'write off this amount', 'charge is bogus', 'bogus charge',
+                'this is an error', 'this is a error', 'dont have record', 'don\'t have record',
+                'no knowledge of', 'unaware of this charge', 'researching this charge',
+                'never received invoice', 'never received statement', 'no record of',
+                'dont owe', 'don\'t owe', 'are not responsible', 'not liable for this',
+                'incorrect charge', 'wrong amount', 'billing mistake', 'charge in error',
+                
+                # CRITICAL ADDITIONS from thread analysis:
+                'i don\'t know anything about owing', 'don\'t know anything about owing',
+                'i was disputing', 'was disputing', 'disputing with', 'disputing over',
+                'minimum settlement amount', 'settlement amount', 'clear the account'
             ],
             
             'Invoice Receipt': [
@@ -66,7 +80,10 @@ class NLPProcessor:
             'Closure Notification': [
                 'business closed', 'company closed', 'out of business', 'ceased operations',
                 'filed bankruptcy', 'bankruptcy protection', 'chapter 7', 'chapter 11',
-                'business shutting down', 'permanently closed', 'company liquidated'
+                'business shutting down', 'permanently closed', 'company liquidated',
+                # ENHANCED: Additional closure patterns
+                'filing for bankruptcy', 'going out of business', 'business dissolution',
+                'company dissolved', 'operations terminated', 'business terminated'
             ],
             
             'Closure + Payment Due': [
@@ -89,7 +106,10 @@ class NLPProcessor:
             'Inquiry/Redirection': [
                 'insufficient data to research', 'need guidance', 'please advise', 'redirect to',
                 'contact instead', 'reach out to', 'please check with', 'what documentation needed',
-                'where to send payment', 'verify legitimate', 'guidance required', 'need clarification'
+                'where to send payment', 'verify legitimate', 'guidance required', 'need clarification',
+                
+                # CRITICAL ADDITIONS from thread analysis:
+                'i don\'t have an account with', 'what is the servicing address'
             ],
             
             'Complex Queries': [
@@ -124,74 +144,120 @@ class NLPProcessor:
                 'closure announcement', 'business will close', 'store closing notice'
             ],
             
-            'General (Thank You)': [
-                'thank you for your email', 'thanks for contacting', 'thank you for reaching out',
-                'still reviewing', 'currently reviewing', 'under review', 'we are reviewing',
-                'for your records', 'acknowledgment received', 'message received'
-            ],
+            # NOTE: Removed 'General (Thank You)' as requested in hierarchy update
             
             'Created': [
                 'ticket created', 'case opened', 'new ticket opened', 'support request created',
                 'case has been created', 'ticket submitted successfully', 'case number assigned',
-                'support ticket opened', 'request has been submitted', 'case opened for review'
+                'support ticket opened', 'request has been submitted', 'case opened for review',
+                # ENHANCED: Additional ticket creation patterns
+                'case logged', 'ticket logged', 'new case created', 'support case opened'
             ],
             
             'Resolved': [
                 'ticket resolved', 'case resolved', 'case closed', 'ticket has been resolved',
                 'marked as resolved', 'status resolved', 'case completed', 'issue resolved',
-                'request completed', 'ticket closed successfully'
+                'request completed', 'ticket closed successfully',
+                # ENHANCED: Additional resolution patterns
+                'case completed successfully', 'ticket marked complete', 'issue closed'
             ],
             
             'Open': [
                 'ticket open', 'case open', 'still pending', 'case pending', 'under investigation',
-                'being processed', 'in progress', 'awaiting response'
+                'being processed', 'in progress', 'awaiting response',
+                # ENHANCED: Additional open status patterns
+                'under review', 'being reviewed', 'awaiting information', 'pending review'
             ],
 
             # === INVOICES REQUEST SUBLABEL ===
             'Request (No Info)': [
                 'send me the invoice', 'provide the invoice', 'need invoice copy', 'invoice request',
                 'copies of invoices', 'send invoices that are due', 'provide outstanding invoices',
-                'forward invoice copy', 'share invoice copy', 'need invoice documentation'
+                'forward invoice copy', 'share invoice copy', 'need invoice documentation',
+                # ENHANCED: Additional invoice request patterns
+                'send invoice copy', 'invoice copy needed', 'need copy of invoice',
+                'please send invoice', 'provide invoice copy', 'invoice documentation needed'
             ],
 
             # === PAYMENTS CLAIM SUBLABELS ===
             'Claims Paid (No Info)': [
                 'already paid', 'payment was made', 'we paid', 'bill was paid', 'payment was sent',
                 'check was sent', 'payment completed', 'this was paid', 'account paid', 'made payment',
-                'been paid', 'payment processed', 'invoice settled'
+                'been paid', 'payment processed', 'invoice settled',
+                # ENHANCED: Additional past payment patterns
+                'account was paid', 'invoice was paid', 'bill has been paid', 'we have paid',
+                'payment was completed', 'check mailed', 'payment sent', 'balance paid',
+                
+                # CRITICAL ADDITIONS from thread analysis:
+                'i have paid all these bills', 'have paid all', 'paid all these'
             ],
             
             'Payment Details Received': [
                 'payment will be sent', 'payment being processed', 'check will be mailed',
                 'payment scheduled', 'in process of issuing payment', 'invoices being processed for payment',
-                'will pay this online', 'working on payment', 'need time to pay', 'payment in progress'
+                'will pay this online', 'working on payment', 'need time to pay', 'payment in progress',
+                
+                # ENHANCED: Missing future payment patterns from misclassified emails
+                'will make payment from next week', 'can we do the first payment this upcoming',
+                'payment this upcoming monday', 'make payment from next', 'going to pay',
+                'plan to pay', 'will pay next week', 'payment next week', 'when can we pay',
+                'payment is awaiting information', 'payment awaiting information', 'will issue payment',
+                'payment will be issued', 'arranging payment', 'scheduling payment',
+                'payment arrangement', 'will send payment', 'planning to pay', 'intend to pay',
+                
+                # Payment issues/help patterns
+                'help me for payment', 'payment help', 'payment issue', 'tried to pay',
+                'payment error', 'trouble paying', 'cannot pay', 'unable to pay',
+                'payment link error', 'error when paying', 'payment not working'
             ],
             
             'Payment Confirmation': [
                 'payment confirmation attached', 'proof of payment', 'check number', 'transaction id',
                 'eft#', 'wire confirmation', 'batch number', 'here is proof of payment',
                 'payment receipt attached', 'invoice was paid see attachments', 'payment verified',
-                'paid via transaction number'
+                'paid via transaction number',
+                # ENHANCED: Additional proof patterns
+                'receipt attached', 'confirmation attached', 'payment receipt', 'bank confirmation',
+                'transfer confirmation', 'payment verification', 'proof attached',
+                
+                # CRITICAL ADDITIONS from thread analysis:
+                'sent proof several times', 'sent proof', 'have paid.*and sent proof'
             ],
 
             # === AUTO REPLY SUBLABELS ===
             'With Alternate Contact': [
                 'alternate contact', 'emergency contact number', 'urgent matters contact',
                 'immediate assistance contact', 'contact me at', 'reach me at', 'call for urgent',
-                'emergency contact information'
+                'emergency contact information',
+                # ENHANCED: Better contact detection patterns
+                'please contact', 'please email', 'call me at', 'reach out to',
+                'for urgent assistance', 'emergency phone', 'alternate phone',
+                'backup contact', 'direct contact', 'personal contact'
             ],
             
             'No Info/Autoreply': [
                 'out of office', 'automatic reply', 'auto-reply', 'currently out', 'away from desk',
                 'on vacation', 'limited access to email', 'do not reply', 'automated response',
-                'currently unavailable'
+                'currently unavailable',
+                # ENHANCED: Missing OOO patterns from misclassified emails
+                'attending meetings', 'attending company meetings', 'currently attending',
+                'offsite conference', 'away conference', 'out meetings', 'limited email access',
+                'no access to email', 'temporarily away', 'away from office',
+                'out of the office', 'will be out', 'currently offsite'
             ],
             
             'Return Date Specified': [
                 'return on', 'back on', 'returning on', 'will be back on', 'return date is',
                 'expected return date', 'back monday', 'return monday', 'back next week',
                 'return next week', 'out until', 'away until', 'return after holiday',
-                'returning from leave on', 'back from vacation on'
+                'returning from leave on', 'back from vacation on',
+                # ENHANCED: Better return date detection from misclassified emails
+                'out from to', 'away from to', 'back on friday', 'return friday',
+                'out until monday', 'away until friday', 'back after weekend',
+                'return after', 'will be back', 'expected back', 'returning after',
+                
+                # CRITICAL ADDITIONS from thread analysis:
+                'i will be in touch.*next week', 'out of the country', 'away from work'
             ],
             
             'Survey': [
@@ -203,22 +269,26 @@ class NLPProcessor:
             'Redirects/Updates (property changes)': [
                 'property manager changed', 'no longer employed', 'contact changed',
                 'department changed', 'no longer with company', 'position changed',
-                'email address changed', 'contact information updated'
+                'email address changed', 'contact information updated',
+                # ENHANCED: Additional contact change patterns
+                'no longer affiliated', 'please remove me', 'unsubscribe me',
+                'quit contacting', 'do not contact further', 'contact details changed',
+                'management changed', 'new contact person'
             ]
         }
         
-        # Business terms
+        # ENHANCED: Business terms with additional keywords
         self.financial_keywords = {
-            'payment': ['payment', 'paid', 'check', 'wire', 'eft'],
-            'invoice': ['invoice', 'bill', 'statement', 'billing'],
-            'dispute': ['dispute', 'contested', 'scam', 'fdcpa'],
-            'legal': ['attorney', 'lawyer', 'legal', 'settlement'],
-            'closure': ['closed', 'bankruptcy', 'ceased operations']
+            'payment': ['payment', 'paid', 'check', 'wire', 'eft', 'transaction', 'transfer', 'remittance'],
+            'invoice': ['invoice', 'bill', 'statement', 'billing', 'charges', 'fees'],
+            'dispute': ['dispute', 'contested', 'scam', 'fdcpa', 'challenge', 'refuse', 'bogus'],
+            'legal': ['attorney', 'lawyer', 'legal', 'settlement', 'court', 'litigation'],
+            'closure': ['closed', 'bankruptcy', 'ceased operations', 'liquidated', 'dissolved']
         }
         
-        # Action indicators
-        self.urgency_words = ['urgent', 'immediate', 'asap', 'critical', 'deadline']
-        self.action_words = ['please', 'need', 'send', 'provide', 'confirm', 'verify']
+        # ENHANCED: Action indicators with additional words
+        self.urgency_words = ['urgent', 'immediate', 'asap', 'critical', 'deadline', 'emergency', 'priority']
+        self.action_words = ['please', 'need', 'send', 'provide', 'confirm', 'verify', 'forward', 'share']
 
     def _initialize_entities(self) -> None:
         """Initialize entity patterns."""

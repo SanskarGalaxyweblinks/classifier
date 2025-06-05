@@ -29,22 +29,28 @@ class PatternMatcher:
         self.logger.info("✅ Strong Pattern Matcher initialized")
 
     def _initialize_patterns(self) -> None:
-        """Initialize strong, specific patterns for accurate classification."""
+        """Initialize enhanced patterns with minimal conflicts and proper OOO detection."""
         
         self.patterns = {
             "Manual Review": {
                 "Partial/Disputed Payment": [
-                    # Strong dispute patterns
-                    r"\bformally\s+disputing\b",r"\bdisputing\s+with\s+insurance\b",
-                    r"\bmistake\s+was\s+theirs?\b",r"\bsettlement\s+.*\$\d+\b",r"\bsettled?\s+.*\$\d+\b",
-                    r"\bdispute\s+this\s+debt\b",r"\bowe\s+them?\s+nothing\b",r"\bconsider\s+this\s+a?\s+scam\b",
-                    r"\bdo\s+not\s+acknowledge\b",r"\bbilling\s+is\s+incorrect\b",r"\bnot\s+our\s+responsibility\b",
-                    r"\bcease\s+and\s+desist\b",r"\bfdcpa\s+violation\b",r"\bdebt\s+validation\b",
-                    r"\bcontested\s+payment\b",r"\brefuse\s+to\s+pay\b",r"\bunauthorized\s+charge\b",
-                    r"\bfraudulent\s+charge\b",r"\bincorrect\s+billing\b",r"\bincorrect\s+amount\b",
-                    r"\bincorrect\s+payment\b",r"\bincorrect\s+invoice\b",r"\bincorrect\s+statement\b",
-                    r"\bincorrect\s+charge\b",r"\bincorrect\s+payment\b",r"\bincorrect\s+invoice\b",
-                    r"\bincorrect\s+statement\b",r"\bincorrect\s+charge\b"
+                    # Strong dispute patterns - SPECIFIC to avoid conflicts
+                    r"\bformally\s+disputing\b", r"\bdisputing\s+with\s+insurance\b",
+                    r"\bmistake\s+was\s+theirs?\b", r"\bsettlement\s+.*\$\d+\b", r"\bsettled?\s+.*\$\d+\b",
+                    r"\bdispute\s+this\s+debt\b", r"\bowe\s+them?\s+nothing\b", r"\bconsider\s+this\s+a?\s+scam\b",
+                    r"\bdo\s+not\s+acknowledge\b", r"\bbilling\s+is\s+incorrect\b", r"\bnot\s+our\s+responsibility\b",
+                    r"\bcease\s+and\s+desist\b", r"\bfdcpa\s+violation\b", r"\bdebt\s+validation\b",
+                    r"\bcontested\s+payment\b", r"\brefuse\s+to\s+pay\b", r"\bunauthorized\s+charge\b",
+                    r"\bfraudulent\s+charge\b", r"\bincorrect\s+billing\b", r"\bincorrect\s+amount\b",
+                    r"\bincorrect\s+payment\b", r"\bincorrect\s+invoice\b", r"\bincorrect\s+statement\b",
+                    
+                    # ENHANCED: Add specific dispute patterns (no conflicts)
+                    r"\bwe\s+do\s+not\s+owe\s+.*amount\b",  # More specific than just "do not owe"
+                    r"\bare\s+not\s+responsible\s+for\s+this\b",  # More specific
+                    r"\bunaware\s+of\s+this\s+charge\s+and\s+.*researching\b",  # Combined pattern
+                    r"\bno\s+record\s+of\s+this\s+.*charge\b",  # More specific
+                    r"\bnever\s+received\s+.*invoice\b",  # More specific
+                    r"\bwe\s+don'?t\s+owe\s+.*money\b"  # More specific
                 ],
 
                 "Invoice Receipt": [
@@ -59,145 +65,85 @@ class PatternMatcher:
                 ],
 
                 "Closure Notification": [
-                    # Business closure
-                    r"\bbusiness\s+closed\b",
-                    r"\bcompany\s+closed\b",
-                    r"\bfiled\s+bankruptcy\b",
-                    r"\bout\s+of\s+business\b",
-                    r"\bceased\s+operations\b",
-                    r"\bpermanently\s+closed\b",
-                    r"\bchapter\s+7\b",
-                    r"\bchapter\s+11\b"
+                    r"\bbusiness\s+closed\b", r"\bcompany\s+closed\b", r"\bfiled\s+bankruptcy\b",
+                    r"\bout\s+of\s+business\b", r"\bceased\s+operations\b", r"\bpermanently\s+closed\b",
+                    r"\bchapter\s+7\b", r"\bchapter\s+11\b"
                 ],
 
                 "Closure + Payment Due": [
-                    # Closure with outstanding payment
-                    r"\bclosed\s+.*outstanding\s+payment\b",
-                    r"\bbankruptcy\s+.*payment\s+due\b",
+                    r"\bclosed\s+.*outstanding\s+payment\b", r"\bbankruptcy\s+.*payment\s+due\b",
                     r"\bclosure\s+.*payment\s+owed\b"
                 ],
 
                 "External Submission": [
-                    # Submission failures
-                    r"\binvoice\s+submission\s+failed\b",
-                    r"\bimport\s+failed\b",
-                    r"\bprocessing\s+failed\b",
-                    r"\bunable\s+to\s+import\s+invoice\b",
-                    r"\bsubmission\s+unsuccessful\b",
+                    r"\binvoice\s+submission\s+failed\b", r"\bimport\s+failed\b", r"\bprocessing\s+failed\b",
+                    r"\bunable\s+to\s+import\s+invoice\b", r"\bsubmission\s+unsuccessful\b",
                     r"\bdocuments\s+not\s+processed\b"
                 ],
 
                 "Invoice Errors (format mismatch)": [
-                    # Format errors
-                    r"\bmissing\s+required\s+field\b",
-                    r"\bformat\s+mismatch\b",
-                    r"\binvalid\s+invoice\s+format\b",
-                    r"\bincomplete\s+invoice\b",
-                    r"\bformat\s+requirements\s+not\s+met\b",
+                    r"\bmissing\s+required\s+field\b", r"\bformat\s+mismatch\b", r"\binvalid\s+invoice\s+format\b",
+                    r"\bincomplete\s+invoice\b", r"\bformat\s+requirements\s+not\s+met\b",
                     r"\bmandatory\s+fields?\s+missing\b"
                 ],
 
                 "Inquiry/Redirection": [
-                    # Questions and redirections
-                    r"\bplease\s+advise\b",
-                    r"\bneed\s+guidance\b",
-                    r"\bcontact\s+.*instead\b",
-                    r"\bwhat\s+vendor\b",
-                    r"\bwhere\s+to\s+send\s+payment\b",
-                    r"\bwhat\s+documentation\s+needed\b",
-                    r"\bverify\s+legitimate\b",
-                    r"\bguidance\s+required\b"
+                    r"\bplease\s+advise\b", r"\bneed\s+guidance\b", r"\bcontact\s+.*instead\b",
+                    r"\bwhat\s+vendor\b", r"\bwhere\s+to\s+send\s+payment\b",
+                    r"\bwhat\s+documentation\s+needed\b", r"\bverify\s+legitimate\b", r"\bguidance\s+required\b"
                 ],
 
                 "Complex Queries": [
-                    # Legal and complex matters
-                    r"\bsettlement\s+arrangement\b",
-                    r"\blegal\s+settlement\b",
-                    r"\battorney\s+settlement\b",
-                    r"\bcomplex\s+business\s+instructions\b",
-                    r"\brouting\s+instructions\b",
-                    r"\bmulti\s+step\s+process\b",
-                    r"\blegal\s+proceedings\b",
-                    r"\bmediation\s+settlement\b"
+                    r"\bsettlement\s+arrangement\b", r"\blegal\s+settlement\b", r"\battorney\s+settlement\b",
+                    r"\bcomplex\s+business\s+instructions\b", r"\brouting\s+instructions\b",
+                    r"\bmulti\s+step\s+process\b", r"\blegal\s+proceedings\b", r"\bmediation\s+settlement\b"
                 ]
             },
     
             "No Reply (with/without info)": {
                 "Sales/Offers": [
-                    # Marketing and sales
-                    r"\bspecial\s+offer\b",
-                    r"\blimited\s+time\s+offer\b",
-                    r"\bpromotional\s+offer\b",
-                    r"\bdiscount\s+offer\b",
-                    r"\bexclusive\s+deal\b",
-                    r"\bprices?\s+increasing\b",
-                    r"\bsale\s+ending\b",
-                    r"\bpayment\s+plan\s+options\b",
-                    r"\binstallment\s+plan\b",
+                    r"\bspecial\s+offer\b", r"\blimited\s+time\s+offer\b", r"\bpromotional\s+offer\b",
+                    r"\bdiscount\s+offer\b", r"\bexclusive\s+deal\b", r"\bprices?\s+increasing\b",
+                    r"\bsale\s+ending\b", r"\bpayment\s+plan\s+options\b", r"\binstallment\s+plan\b",
                     r"\bfinancing\s+options\b"
                 ],
 
                 "System Alerts": [
-                    # System notifications
-                    r"\bsystem\s+notification\b",
-                    r"\bpassword\s+.*expires\b",
-                    r"\bmaintenance\s+notification\b",
-                    r"\bsecurity\s+alert\b",
-                    r"\bserver\s+maintenance\b"
+                    r"\bsystem\s+notification\b", r"\bpassword\s+.*expires\b", r"\bmaintenance\s+notification\b",
+                    r"\bsecurity\s+alert\b", r"\bserver\s+maintenance\b"
                 ],
 
                 "Processing Errors": [
-                    # System processing errors
-                    r"\bprocessing\s+error\b",
-                    r"\bfailed\s+to\s+process\b",
-                    r"\bdelivery\s+failed\b",
-                    r"\belectronic\s+invoice\s+rejected\b",
-                    r"\bmail\s+delivery\s+failed\b",
-                    r"\bsystem\s+unable\s+to\s+process\b",
-                    r"\bcannot\s+be\s+processed\b"
+                    r"\bprocessing\s+error\b", r"\bfailed\s+to\s+process\b", r"\bdelivery\s+failed\b",
+                    r"\belectronic\s+invoice\s+rejected\b", r"\bmail\s+delivery\s+failed\b",
+                    r"\bsystem\s+unable\s+to\s+process\b", r"\bcannot\s+be\s+processed\b"
                 ],
 
                 "Business Closure (Info only)": [
-                    # Informational closure notices
-                    r"\bbusiness\s+closure\s+information\b",
-                    r"\bclosure\s+notification\s+only\b",
-                    r"\binformational\s+closure\b",
-                    r"\bstore\s+closing\s+notice\b"
+                    r"\bbusiness\s+closure\s+information\b", r"\bclosure\s+notification\s+only\b",
+                    r"\binformational\s+closure\b", r"\bstore\s+closing\s+notice\b"
                 ],
 
                 "Created": [
-                    # Ticket creation
-                    r"\bticket\s+created\b",
-                    r"\bcase\s+opened\b",
-                    r"\bnew\s+ticket\s+opened\b",
-                    r"\bsupport\s+request\s+created\b",
-                    r"\bcase\s+number\s+assigned\b",
+                    r"\bticket\s+created\b", r"\bcase\s+opened\b", r"\bnew\s+ticket\s+opened\b",
+                    r"\bsupport\s+request\s+created\b", r"\bcase\s+number\s+assigned\b",
                     r"\bticket\s+submitted\s+successfully\b"
                 ],
 
                 "Resolved": [
-                    # Case resolution
-                    r"\bticket\s+resolved\b",
-                    r"\bcase\s+resolved\b",
-                    r"\bcase\s+closed\b",
-                    r"\bmarked\s+as\s+resolved\b",
-                    r"\bissue\s+resolved\b",
-                    r"\brequest\s+completed\b"
+                    r"\bticket\s+resolved\b", r"\bcase\s+resolved\b", r"\bcase\s+closed\b",
+                    r"\bmarked\s+as\s+resolved\b", r"\bissue\s+resolved\b", r"\brequest\s+completed\b"
                 ],
 
                 "Open": [
-                    # Open ticket status
-                    r"\bticket\s+open\b",
-                    r"\bcase\s+pending\b",
-                    r"\bunder\s+investigation\b",
-                    r"\bbeing\s+processed\b",
-                    r"\bin\s+progress\b"
+                    r"\bticket\s+open\b", r"\bcase\s+pending\b", r"\bunder\s+investigation\b",
+                    r"\bbeing\s+processed\b", r"\bin\s+progress\b"
                 ]
             },
     
             "Invoices Request": {
                 "Request (No Info)": [
-                    # Invoice requests
+                    # CONFLICT-FREE: More specific invoice request patterns
                     r"\bsend\s+me\s+the\s+invoices?\b",
                     r"\bprovide\s+.*invoices?\s+copies?\b",
                     r"\bneed\s+invoices?\s+copies?\b",
@@ -205,103 +151,110 @@ class PatternMatcher:
                     r"\bforward\s+invoices?\s+copies?\b",
                     r"\bprovide\s+outstanding\s+invoices?\b",
                     r"\bcopies\s+of\s+.*invoices?\b",
-                    r"\bneed\s+a\s+breakdown\s+by\s+invoice\b"
+                    r"\bneed\s+a\s+breakdown\s+by\s+invoice\b",
+                    
+                    # ENHANCED: Specific thread patterns (avoid conflicts with payments)
+                    r"\bsend\s+a\s+copy\s+of\s+the\s+invoice\s+that\s+is\s+due\b",  # Very specific
+                    r"\bprovide\s+an?\s+invoice\s+copy\s+in\s+pdf\s+format\b",  # Very specific
+                    r"\brequest.*copies\s+of\s+these\s+invoices\b",  # Specific
+                    r"\bcopies\s+of\s+these\s+invoices\s+as\s+we\s+do\s+not\s+have\b"  # Specific context
                 ]
             },
 
             "Payments Claim": {
                 "Claims Paid (No Info)": [
-                    # Payment claims without proof
-                    r"\balready\s+paid\b",
-                    r"\bpayment\s+was\s+made\b",
-                    r"\bwe\s+paid\b",
-                    r"\bthis\s+was\s+paid\b",
-                    r"\baccount\s+was\s+paid\b",
-                    r"\bhas\s+been\s+paid\b",
-                    r"\bcheck\s+was\s+sent\b",
-                    r"\bpayment\s+completed\b",
-                    r"\binvoice\s+settled\b"
+                    # CONFLICT-FREE: Specific past payment claims (avoid generic "paid")
+                    r"\balready\s+paid\s+this\b",  # More specific
+                    r"\bthis\s+was\s+paid\s+on\s+\d+\/\d+\/\d+\b",  # With date
+                    r"\bwe\s+paid\s+this\s+.*balance\b",  # More specific
+                    r"\baccount\s+was\s+paid\s+.*ago\b",  # More specific
+                    r"\bhas\s+been\s+paid\s+to\s+\w+\b",  # More specific
+                    r"\bcheck\s+was\s+sent\s+.*ago\b",  # More specific
+                    r"\bpayment\s+completed\s+.*ago\b",  # More specific
+                    r"\binvoice\s+settled\s+.*ago\b",  # More specific
+                    
+                    # ENHANCED: Specific thread payment claim patterns
+                    r"\bpaid\s+this\s+outstanding\s+balance\s+to\s+\w+\b",  # Very specific
+                    r"\bverify\s+.*this\s+has\s+been\s+paid\b",  # Verification request
+                    r"\bplease\s+verify\s+.*paid\s+.*ago\b",  # Verification with time
+                    r"\bconfirm\s+.*has\s+been\s+paid\s+to\b"  # Confirmation request
                 ],
                 
                 "Payment Confirmation": [
-                    # Payment with proof
-                    r"\bproof\s+of\s+payment\s+attached\b",
-                    r"\bpayment\s+confirmation\s+attached\b",
-                    r"\breceipt\s+attached\b",
-                    r"\bcheck\s+number\s+\d+\b",
-                    r"\btransaction\s+id\s+\w+\b",
-                    r"\bach\s+payment\s+id\b",
-                    r"\blast\s+4\s+digits\b",
-                    r"\breceipt\s+is\s+attached\b",
-                    r"\bpayment\s+id\s+are\s+\d+\b",
-                    r"\beft#\s+\w+\b",
-                    r"\bwire\s+confirmation\b",
-                    r"\bbatch\s+number\b",
-                    r"\bpaid\s+see\s+attachments\b",
-                    r"\bhere\s+is\s+proof\s+of\s+payment\b"
+                    # Keep these specific - no conflicts
+                    r"\bproof\s+of\s+payment\s+attached\b", r"\bpayment\s+confirmation\s+attached\b",
+                    r"\breceipt\s+attached\b", r"\bcheck\s+number\s+\d+\b", r"\btransaction\s+id\s+\w+\b",
+                    r"\bach\s+payment\s+id\b", r"\blast\s+4\s+digits\b", r"\breceipt\s+is\s+attached\b",
+                    r"\bpayment\s+id\s+are\s+\d+\b", r"\beft#\s+\w+\b", r"\bwire\s+confirmation\b",
+                    r"\bbatch\s+number\b", r"\bpaid\s+see\s+attachments\b", r"\bhere\s+is\s+proof\s+of\s+payment\b"
                 ],
 
                 "Payment Details Received": [
-                    # Future/pending payments
-                    r"\bpayment\s+will\s+be\s+sent\b",
-                    r"\bpayment\s+being\s+processed\b",
-                    r"\bworking\s+on\s+payment\b",
-                    r"\bpayment\s+scheduled\b",
-                    r"\bwill\s+pay\s+.*online\b",
-                    r"\binvoices?\s+being\s+processed\s+for\s+payment\b"
+                    # CONFLICT-FREE: Specific future payment patterns
+                    r"\bpayment\s+will\s+be\s+sent\s+.*\b",  # More specific
+                    r"\bpayment\s+being\s+processed\s+for\b",  # More specific
+                    r"\bworking\s+on\s+payment\s+.*\b",  # More specific
+                    r"\bpayment\s+scheduled\s+for\b",  # More specific
+                    r"\bwill\s+pay\s+.*online\s+.*\b",  # More specific
+                    r"\binvoices?\s+being\s+processed\s+for\s+payment\b",
+                    
+                    # ENHANCED: Specific future payment patterns (avoid conflicts)
+                    r"\bi\s+will\s+pay\s+the\s+remainder\s+after\b",  # Very specific
+                    r"\bcan\s+we\s+do\s+the\s+first\s+payment\s+.*monday\b",  # Very specific
+                    r"\bissue\s+a\s+payment\s+plan\s+to\s+start\b",  # Very specific
+                    r"\bhelp\s+me\s+for\s+payment\s+.*error\b",  # Very specific
+                    r"\btried\s+to\s+pay\s+through\s+.*link\b",  # Very specific
+                    r"\bpayment\s+error\s+.*information\b"  # Very specific
                 ]
             },
 
             "Auto Reply (with/without info)": {
                 "With Alternate Contact": [
-                    # OOO with contact info
+                    # FIXED: Proper alternate contact patterns
                     r"\balternate\s+contact\b",
-                    r"\bemergency\s+contact\b",
-                    r"\bcontact\s+me\s+at\b",
+                    r"\bemergency\s+contact\b", 
+                    r"\bcontact\s+me\s+at\s+\d+\b",  # With phone number
                     r"\bfor\s+urgent\s+matters\s+contact\b",
-                    r"\bimmediate\s+assistance\s+contact\b"
+                    r"\bimmediate\s+assistance\s+contact\b",
+                    r"\breach\s+me\s+at\s+\d+\b",  # With phone number
+                    r"\bcall\s+me\s+at\s+\d+\b"  # With phone number
                 ],
 
                 "Return Date Specified": [
-                    # OOO with return date
-                    r"\breturn\s+on\s+\w+\b",
-                    r"\bback\s+on\s+\w+\b",
-                    r"\breturning\s+on\s+\w+\b",
-                    r"\bout\s+until\s+\w+\b",
-                    r"\baway\s+until\s+\w+\b",
-                    r"\bexpected\s+return\s+date\b",
-                    r"\bback\s+from\s+vacation\s+on\b"
+                    # FIXED: Proper return date patterns
+                    r"\breturn\s+on\s+\w+day\b",  # return on Monday
+                    r"\bback\s+on\s+\w+day\b",     # back on Friday
+                    r"\breturning\s+on\s+\d+\/\d+\b",  # returning on 6/10
+                    r"\bout\s+until\s+\d+\/\d+\b",     # out until 6/15
+                    r"\baway\s+until\s+\w+day\b",      # away until Monday
+                    r"\bexpected\s+return\s+date\s+is\s+\d+\b",
+                    r"\bback\s+from\s+vacation\s+on\s+\d+\b",
+                    r"\bwill\s+be\s+out\s+of\s+.*office\s+.*monday\b",  # Specific pattern
+                    r"\breturn\s+.*monday\b",  # return Monday
+                    r"\bback\s+.*monday\b"     # back Monday
                 ],
 
                 "No Info/Autoreply": [
-                    # Generic auto-replies
+                    # FIXED: Generic OOO without specific info
                     r"\bout\s+of\s+office\b",
                     r"\bautomatic\s+reply\b",
                     r"\bauto-?reply\b",
                     r"\baway\s+from\s+desk\b",
                     r"\bcurrently\s+out\b",
-                    r"\blimited\s+access\s+to\s+email\b"
+                    r"\blimited\s+access\s+to\s+email\b",
+                    r"\bdo\s+not\s+reply\s+to\s+this\s+email\b",
+                    r"\btemporarily\s+unavailable\b"
                 ],
 
                 "Survey": [
-                    # Surveys and feedback
-                    r"\bsurvey\b",
-                    r"\bfeedback\s+request\b",
-                    r"\brate\s+our\s+service\b",
-                    r"\bcustomer\s+satisfaction\b",
-                    r"\btake\s+our\s+survey\b",
-                    r"\bservice\s+evaluation\b"
+                    r"\bsurvey\b", r"\bfeedback\s+request\b", r"\brate\s+our\s+service\b",
+                    r"\bcustomer\s+satisfaction\b", r"\btake\s+our\s+survey\b", r"\bservice\s+evaluation\b"
                 ],
 
                 "Redirects/Updates (property changes)": [
-                    # Contact changes
-                    r"\bno\s+longer\s+employed\b",
-                    r"\bcontact\s+changed\b",
-                    r"\bproperty\s+manager\s+changed\b",
-                    r"\bemail\s+address\s+changed\b",
-                    r"\bcontact\s+information\s+updated\b",
-                    r"\bplease\s+quit\s+contacting\b",
-                    r"\bdo\s+not\s+contact\s+me\s+further\b"
+                    r"\bno\s+longer\s+employed\b", r"\bcontact\s+changed\b", r"\bproperty\s+manager\s+changed\b",
+                    r"\bemail\s+address\s+changed\b", r"\bcontact\s+information\s+updated\b",
+                    r"\bplease\s+quit\s+contacting\b", r"\bdo\s+not\s+contact\s+me\s+further\b"
                 ]
             }
         }

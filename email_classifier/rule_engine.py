@@ -353,7 +353,62 @@ class RuleEngine:
         return None
 
     def _classify_thread_payments(self, text: str) -> Optional[RuleResult]:
-        """Classify thread emails for Payments Claim category using EXISTING patterns."""
+        """Classify thread emails for Payments Claim category using ENHANCED patterns."""
+        
+        # ENHANCED: Add common payment-related phrases that are missed
+        common_payment_claims = [
+            # Past payment claims
+            'already paid', 'payment was made', 'check was sent', 'we paid',
+            'account paid', 'this was paid', 'been paid', 'payment completed',
+            'paid this outstanding balance', 'has been paid', 'we have paid',
+            'paid this', 'paid the', 'payment made', 'balance paid',
+            
+            # Payment verification requests
+            'verify this has been paid', 'please verify', 'confirm payment',
+            'check if paid', 'verify payment', 'confirm this has been paid',
+            
+            # Future payment intentions
+            'will pay', 'i will pay', 'we will pay', 'going to pay',
+            'can we do the first payment', 'payment this upcoming',
+            'when can we pay', 'payment plan', 'issue a payment plan',
+            'schedule payment', 'arrange payment', 'payment arrangement',
+            
+            # Payment questions/help
+            'help me for payment', 'payment help', 'payment issue',
+            'tried to pay', 'error when paying', 'payment error',
+            'payment link error', 'cannot pay', 'trouble paying'
+        ]
+        
+        # ENHANCED: Dispute/responsibility phrases (should go to Manual Review instead)
+        dispute_responsibility_phrases = [
+            'do not owe', 'not responsible', 'not our responsibility',
+            'we don\'t owe', 'are not responsible', 'not liable',
+            'unaware of this charge', 'researching this charge',
+            'no record of', 'never received', 'dispute this'
+        ]
+        
+        # Check for dispute/responsibility patterns FIRST (redirect to Manual Review)
+        dispute_matches = sum(1 for pattern in dispute_responsibility_phrases if pattern in text)
+        if dispute_matches >= 1:
+            return RuleResult("Manual Review", "Partial/Disputed Payment", 0.90,
+                            "Thread: Dispute/responsibility detected", ["thread_dispute_responsibility"])
+        
+        # Check for common payment patterns
+        payment_matches = sum(1 for pattern in common_payment_claims if pattern in text)
+        if payment_matches >= 1:
+            # Determine subcategory based on context
+            if any(proof in text for proof in ['receipt', 'confirmation', 'check number', 'transaction id', 'proof']):
+                confidence = min(0.88 + (payment_matches * 0.02), 0.95)
+                return RuleResult("Payments Claim", "Payment Confirmation", confidence,
+                                "Thread: Payment proof provided", ["thread_payment_proof_enhanced"])
+            elif any(future in text for future in ['will pay', 'going to pay', 'plan to pay', 'schedule', 'arrange']):
+                confidence = min(0.85 + (payment_matches * 0.02), 0.92)
+                return RuleResult("Payments Claim", "Payment Details Received", confidence,
+                                "Thread: Future payment planned", ["thread_payment_future"])
+            else:
+                confidence = min(0.82 + (payment_matches * 0.02), 0.90)
+                return RuleResult("Payments Claim", "Claims Paid (No Info)", confidence,
+                                "Thread: Payment claim", ["thread_payment_claim_enhanced"])
         
         # Use pattern matcher directly for better accuracy
         if hasattr(self.pattern_matcher, 'match_text'):
@@ -388,6 +443,25 @@ class RuleEngine:
 
     def _classify_thread_invoices(self, text: str) -> Optional[RuleResult]:
         """Classify thread emails for Invoices Request category using EXISTING patterns."""
+        
+        # ENHANCED: Add common invoice request phrases that are missed
+        common_invoice_requests = [
+            'send a copy of the invoice', 'send copy of the invoice', 'send the invoice',
+            'provide an invoice copy', 'provide invoice copy', 'copy of the invoice',
+            'send me the invoice', 'need invoice copy', 'provide outstanding invoices',
+            'copies of invoices', 'share invoice', 'forward invoice',
+            'invoice request', 'need invoice documentation', 'send invoices',
+            'invoice copy in pdf', 'copy of invoice', 'invoice that is due'
+        ]
+        
+        # Check for common invoice request patterns FIRST
+        invoice_request_matches = sum(1 for pattern in common_invoice_requests if pattern in text)
+        if invoice_request_matches >= 1:
+            # Make sure it's not providing proof (which would be Manual Review)
+            if not any(proof in text for proof in ['attached', 'proof', 'documentation', 'receipt', 'was paid', 'see attached']):
+                confidence = min(0.88 + (invoice_request_matches * 0.02), 0.95)
+                return RuleResult("Invoices Request", "Request (No Info)", confidence,
+                                "Thread: Invoice request detected", ["thread_invoice_request_enhanced"])
         
         # Use pattern matcher directly for better accuracy
         if hasattr(self.pattern_matcher, 'match_text'):
@@ -445,18 +519,20 @@ class RuleEngine:
         return None
 
     def _apply_regular_classification(self, text: str, subject: str) -> Optional[RuleResult]:
-        """Apply the existing regular classification logic."""
+        """Apply regular classification with CORRECT PRIORITY ORDER."""
         
-        # 1A: DISPUTES & PAYMENTS → Partial/Disputed Payment
+        # PRIORITY 1: THREE MAIN THREAD LABELS (HIGHEST PRIORITY)
+        
+        # Manual Review
         dispute_phrases = [
             'formally disputing', 'dispute this debt', 'owe nothing', 'owe them nothing',
             'consider this a scam', 'billing is incorrect', 'cease and desist', 'fdcpa',
-            'do not acknowledge', 'not our responsibility', 'contested payment', 'refuse payment'
+            'do not acknowledge', 'not our responsibility', 'contested payment', 'refuse payment',
+            'we do not owe', 'are not responsible', 'unaware of this charge', 'researching this charge'
         ]
         if any(phrase in text for phrase in dispute_phrases):
             return RuleResult("Manual Review", "Partial/Disputed Payment", 0.95, "Dispute detected", ["dispute_rule"])
 
-        # 1B: INVOICE UPDATES → Invoice Receipt
         invoice_proof_phrases = [
             'invoice receipt attached', 'proof of invoice attached', 'invoice copy attached',
             'invoice documentation attached', 'error payment proof', 'payment error documentation'
@@ -464,7 +540,6 @@ class RuleEngine:
         if any(phrase in text for phrase in invoice_proof_phrases):
             return RuleResult("Manual Review", "Invoice Receipt", 0.90, "Invoice proof provided", ["invoice_proof_rule"])
 
-        # 1C: BUSINESS CLOSURE
         closure_phrases = ['business closed', 'filed bankruptcy', 'out of business', 'ceased operations']
         if any(phrase in text for phrase in closure_phrases):
             if any(payment in text for payment in ['outstanding payment', 'payment due', 'amount owed']):
@@ -472,34 +547,131 @@ class RuleEngine:
             else:
                 return RuleResult("Manual Review", "Closure Notification", 0.90, "Business closure", ["closure_rule"])
 
-        # 1D: PAYMENTS CLAIM
-        payment_proof_phrases = ['proof of payment', 'payment confirmation attached', 'check number', 'transaction id']
-        payment_claim_phrases = ['already paid', 'payment was made', 'check was sent', 'account paid']
-        payment_details_phrases = ['payment will be sent', 'payment being processed', 'working on payment']
-        
+        # Payments Claim
+        payment_proof_phrases = [
+            'proof of payment', 'payment confirmation attached', 'check number', 'transaction id',
+            'receipt attached', 'paid see attachments', 'here is proof of payment'
+        ]
         if any(phrase in text for phrase in payment_proof_phrases):
             return RuleResult("Payments Claim", "Payment Confirmation", 0.90, "Payment proof provided", ["payment_proof_rule"])
-        elif any(phrase in text for phrase in payment_details_phrases):
+        
+        payment_details_phrases = [
+            'payment will be sent', 'payment being processed', 'working on payment',
+            'will pay the remainder', 'can we do the first payment', 'issue a payment plan',
+            'help me for payment', 'tried to pay', 'payment error'
+        ]
+        if any(phrase in text for phrase in payment_details_phrases):
             return RuleResult("Payments Claim", "Payment Details Received", 0.85, "Payment details received", ["payment_details_rule"])
-        elif any(phrase in text for phrase in payment_claim_phrases):
+        
+        payment_claim_phrases = [
+            'already paid', 'payment was made', 'check was sent', 'account paid',
+            'this was paid', 'has been paid', 'paid this outstanding balance',
+            'verify this has been paid', 'please verify'
+        ]
+        if any(phrase in text for phrase in payment_claim_phrases):
             return RuleResult("Payments Claim", "Claims Paid (No Info)", 0.85, "Payment claimed without proof", ["payment_claim_rule"])
 
-        # 1E: INVOICES REQUEST
-        invoice_request_phrases = ['send me the invoice', 'need invoice copy', 'provide outstanding invoices']
+        # Invoice Request
+        invoice_request_phrases = [
+            'send me the invoice', 'need invoice copy', 'provide outstanding invoices',
+            'send a copy of the invoice', 'provide an invoice copy', 'copies of invoices',
+            'invoice that is due', 'invoice copy in pdf'
+        ]
         if any(phrase in text for phrase in invoice_request_phrases):
-            if not any(proof in text for proof in ['paid', 'proof', 'attached']):
+            if not any(proof in text for proof in ['paid', 'proof', 'attached', 'was paid']):
                 return RuleResult("Invoices Request", "Request (No Info)", 0.85, "Invoice request", ["invoice_request_rule"])
 
-        # 1F: AUTO REPLY
-        survey_phrases = ['survey', 'feedback request', 'rate our service']
+        # PRIORITY 2: MANUAL REVIEW & OOO
+        
+        # Out of Office with Return Date
+        return_date_phrases = [
+            'return on monday', 'back on monday', 'returning on', 'out until', 'away until',
+            'back on friday', 'return monday', 'back monday', 'return next week', 'back next week',
+            'will be out of office monday', 'expected return date', 'back from vacation on'
+        ]
+        if any(phrase in text for phrase in return_date_phrases):
+            if any(ooo in text for ooo in ['out of office', 'away from desk', 'automatic reply', 'auto-reply']):
+                return RuleResult("Auto Reply (with/without info)", "Return Date Specified", 0.90, 
+                                "OOO with return date", ["ooo_return_date_rule"])
+        
+        # Out of Office with Contact Info
+        contact_phrases = [
+            'alternate contact', 'emergency contact', 'contact me at', 'reach me at',
+            'for urgent matters contact', 'immediate assistance contact', 'call me at'
+        ]
+        if any(phrase in text for phrase in contact_phrases):
+            if any(ooo in text for ooo in ['out of office', 'away from desk', 'automatic reply', 'auto-reply']):
+                return RuleResult("Auto Reply (with/without info)", "With Alternate Contact", 0.90, 
+                                "OOO with contact info", ["ooo_contact_rule"])
+        
+        # Generic Out of Office
+        ooo_phrases = [
+            'out of office', 'automatic reply', 'auto-reply', 'away from desk', 
+            'currently out', 'limited access to email', 'temporarily unavailable'
+        ]
+        if any(phrase in text for phrase in ooo_phrases):
+            business_terms = ['payment', 'invoice', 'dispute', 'collection', 'debt']
+            business_count = sum(1 for term in business_terms if term in text)
+            if business_count < 2:
+                return RuleResult("Auto Reply (with/without info)", "No Info/Autoreply", 0.85, 
+                                "Generic OOO", ["ooo_generic_rule"])
+
+        # PRIORITY 3: TICKET MANAGEMENT
+        
+        ticket_creation_phrases = [
+            'ticket created', 'case opened', 'new ticket opened', 'support request created',
+            'case number assigned', 'ticket submitted successfully', 'new case created'
+        ]
+        if any(phrase in text for phrase in ticket_creation_phrases):
+            return RuleResult("No Reply (with/without info)", "Created", 0.85, "Ticket created", ["ticket_created_rule"])
+        
+        ticket_resolved_phrases = [
+            'ticket resolved', 'case resolved', 'case closed', 'marked as resolved',
+            'issue resolved', 'request completed', 'ticket has been resolved'
+        ]
+        if any(phrase in text for phrase in ticket_resolved_phrases):
+            return RuleResult("No Reply (with/without info)", "Resolved", 0.85, "Ticket resolved", ["ticket_resolved_rule"])
+        
+        ticket_open_phrases = [
+            'ticket open', 'case pending', 'under investigation', 'being processed', 'in progress'
+        ]
+        if any(phrase in text for phrase in ticket_open_phrases):
+            return RuleResult("No Reply (with/without info)", "Open", 0.80, "Open ticket", ["ticket_open_rule"])
+
+        # PRIORITY 4: SURVEY
+        
+        survey_phrases = ['survey', 'feedback request', 'rate our service', 'customer satisfaction']
         if any(phrase in text for phrase in survey_phrases):
-            if not any(business in text for business in ['payment', 'invoice', 'dispute']):
+            business_terms = ['payment', 'invoice', 'dispute', 'collection']
+            if not any(business in text for business in business_terms):
                 return RuleResult("Auto Reply (with/without info)", "Survey", 0.85, "Survey detected", ["survey_rule"])
 
-        # 1G: NO REPLY - SYSTEM
-        processing_phrases = ['processing error', 'failed to process', 'delivery failed']
+        # PRIORITY 5: REMAINING LABELS
+        
+        # Contact Changes
+        contact_change_phrases = [
+            'no longer employed', 'contact changed', 'property manager changed',
+            'please quit contacting', 'do not contact me further', 'contact information updated'
+        ]
+        if any(phrase in text for phrase in contact_change_phrases):
+            return RuleResult("Auto Reply (with/without info)", "Redirects/Updates (property changes)", 0.85, 
+                            "Contact change", ["contact_change_rule"])
+
+        # Processing Errors
+        processing_phrases = [
+            'processing error', 'failed to process', 'delivery failed', 'electronic invoice rejected',
+            'system unable to process', 'cannot be processed'
+        ]
         if any(phrase in text for phrase in processing_phrases):
             return RuleResult("No Reply (with/without info)", "Processing Errors", 0.85, "Processing error", ["processing_rule"])
+        
+        # Sales/Marketing
+        sales_phrases = [
+            'special offer', 'limited time offer', 'promotional offer', 'discount offer',
+            'prices increasing', 'sale ending', 'payment plan options'
+        ]
+        if any(phrase in text for phrase in sales_phrases):
+            return RuleResult("No Reply (with/without info)", "Sales/Offers", 0.80, "Sales/marketing", ["sales_rule"])
 
         return None
 

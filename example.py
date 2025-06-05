@@ -329,30 +329,17 @@ class EnhancedCSVEmailProcessor:
             return {'error': str(e)}
 
 def main():
-    """Main function with enhanced processing"""
+    """Main function - SIMPLE like your original"""
     # Update this path to your CSV file
     csv_file = "/Users/gwl/Desktop/new_project/TESTING/new_start/clean_emails_20250605_123847.csv"
     
     try:
         processor = EnhancedCSVEmailProcessor(csv_file)
         
-        # Test with sample first
-        print("🧪 Testing with sample emails...")
-        sample_results = processor.process_sample(5)
-        
-        if sample_results:
-            print("✅ Sample processing successful!")
-            
-            # Ask user if they want to process all
-            user_input = input("\nProcess all emails? (y/n): ").strip().lower()
-            if user_input in ['y', 'yes']:
-                print("🚀 Processing all emails...")
-                all_results = processor.process_emails()
-                print(f"✅ Processed {len(all_results)} emails total")
-            else:
-                print("👍 Sample processing complete")
-        else:
-            print("❌ Sample processing failed")
+        # Process ALL emails directly (like your original)
+        print("🚀 Processing all emails...")
+        results = processor.process_emails()
+        print(f"✅ Processed {len(results)} emails successfully")
             
     except Exception as e:
         logger.error(f"❌ Processing failed: {e}")

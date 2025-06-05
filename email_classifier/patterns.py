@@ -1,6 +1,6 @@
 """
-Simplified Pattern Matcher - Core Business Patterns Only
-Focus on essential patterns for maximum accuracy with minimal complexity
+Strong Pattern Matcher - Core Business Patterns Only
+Removed General (Thank You) and enhanced pattern accuracy
 """
 
 from typing import Dict, List, Tuple, Optional
@@ -10,15 +10,15 @@ import logging
 logger = logging.getLogger(__name__)
 
 # Configuration
-CONFIDENCE_BASE = 0.75
-CONFIDENCE_BOOST_PER_MATCH = 0.08
+CONFIDENCE_BASE = 0.80
+CONFIDENCE_BOOST_PER_MATCH = 0.10
 MAX_CONFIDENCE = 0.95
-MIN_CONFIDENCE = 0.30
+MIN_CONFIDENCE = 0.40
 
 class PatternMatcher:
     """
-    Simplified pattern matcher with core business patterns only.
-    Reduced complexity for better performance and maintainability.
+    Strong pattern matcher with precise business patterns.
+    Enhanced accuracy and reduced misclassification.
     """
     
     def __init__(self):
@@ -26,246 +26,282 @@ class PatternMatcher:
         self._initialize_patterns()
         self._compile_patterns()
         self._initialize_mappings()
-        self.logger.info("✅ Simplified Pattern Matcher initialized")
+        self.logger.info("✅ Strong Pattern Matcher initialized")
 
     def _initialize_patterns(self) -> None:
-        """Initialize essential patterns with proper word boundaries - core business cases only."""
+        """Initialize strong, specific patterns for accurate classification."""
         
         self.patterns = {
             "Manual Review": {
                 "Partial/Disputed Payment": [
-                    # Core dispute patterns with word boundaries
-                    r"\bdispute\b",
-                    r"\bdisputing\b",
-                    r"\bowe\b.*\bnothing\b",
-                    r"\bowe\b.*\bthem\b.*\bnothing\b",
-                    r"\bcontested\b",
-                    r"\bscam\b",
-                    r"\bfdcpa\b",
-                    r"\bcease\b.*\band\b.*\bdesist\b",
-                    r"\bdo\b.*\bnot\b.*\backnowledge\b",
-                    r"\bdisputing\b.*\bwith\b.*\binsurance\b",
-                    r"\bbilling\b.*\bis\b.*\bincorrect\b",
-                    r"\bnot\b.*\bour\b.*\bresponsibility\b"
+                    # Strong dispute patterns
+                    r"\bformally\s+disputing\b",r"\bdisputing\s+with\s+insurance\b",
+                    r"\bmistake\s+was\s+theirs?\b",r"\bsettlement\s+.*\$\d+\b",r"\bsettled?\s+.*\$\d+\b",
+                    r"\bdispute\s+this\s+debt\b",r"\bowe\s+them?\s+nothing\b",r"\bconsider\s+this\s+a?\s+scam\b",
+                    r"\bdo\s+not\s+acknowledge\b",r"\bbilling\s+is\s+incorrect\b",r"\bnot\s+our\s+responsibility\b",
+                    r"\bcease\s+and\s+desist\b",r"\bfdcpa\s+violation\b",r"\bdebt\s+validation\b",
+                    r"\bcontested\s+payment\b",r"\brefuse\s+to\s+pay\b",r"\bunauthorized\s+charge\b",
+                    r"\bfraudulent\s+charge\b",r"\bincorrect\s+billing\b",r"\bincorrect\s+amount\b",
+                    r"\bincorrect\s+payment\b",r"\bincorrect\s+invoice\b",r"\bincorrect\s+statement\b",
+                    r"\bincorrect\s+charge\b",r"\bincorrect\s+payment\b",r"\bincorrect\s+invoice\b",
+                    r"\bincorrect\s+statement\b",r"\bincorrect\s+charge\b"
                 ],
 
                 "Invoice Receipt": [
-                    # Providing invoice proof with word boundaries
-                    r"\binvoice\b.*\battached\b",
-                    r"\bproof\b.*\bof\b.*\binvoice\b",
-                    r"\binvoice\b.*\bcopy\b.*\battached\b",
-                    r"\binvoice\b.*\breceipt\b.*\battached\b"
+                    # Providing invoice proof
+                    r"\binvoice\s+receipt\s+attached\b",
+                    r"\bproof\s+of\s+invoice\s+attached\b",
+                    r"\binvoice\s+copy\s+attached\b",
+                    r"\binvoice\s+documentation\s+attached\b",
+                    r"\bhere\s+is\s+the\s+invoice\s+copy\b",
+                    r"\berror\s+payment\s+proof\b",
+                    r"\bpayment\s+error\s+documentation\b"
                 ],
 
                 "Closure Notification": [
-                    # Business closure with word boundaries
-                    r"\bbusiness\b.*\bclosed\b",
-                    r"\bfiled\b.*\bbankruptcy\b",
-                    r"\bout\b.*\bof\b.*\bbusiness\b",
-                    r"\bceased\b.*\boperations\b"
+                    # Business closure
+                    r"\bbusiness\s+closed\b",
+                    r"\bcompany\s+closed\b",
+                    r"\bfiled\s+bankruptcy\b",
+                    r"\bout\s+of\s+business\b",
+                    r"\bceased\s+operations\b",
+                    r"\bpermanently\s+closed\b",
+                    r"\bchapter\s+7\b",
+                    r"\bchapter\s+11\b"
+                ],
+
+                "Closure + Payment Due": [
+                    # Closure with outstanding payment
+                    r"\bclosed\s+.*outstanding\s+payment\b",
+                    r"\bbankruptcy\s+.*payment\s+due\b",
+                    r"\bclosure\s+.*payment\s+owed\b"
                 ],
 
                 "External Submission": [
-                    # Submission failures with word boundaries
-                    r"\bsubmission\b.*\bfailed\b",
-                    r"\bimport\b.*\bfailed\b",
-                    r"\bprocessing\b.*\bfailed\b",
-                    r"\binvoice\b.*\bsubmission\b.*\bfailed\b"
+                    # Submission failures
+                    r"\binvoice\s+submission\s+failed\b",
+                    r"\bimport\s+failed\b",
+                    r"\bprocessing\s+failed\b",
+                    r"\bunable\s+to\s+import\s+invoice\b",
+                    r"\bsubmission\s+unsuccessful\b",
+                    r"\bdocuments\s+not\s+processed\b"
                 ],
 
                 "Invoice Errors (format mismatch)": [
-                    # Format errors with word boundaries
-                    r"\bformat\b.*\berror\b",
-                    r"\bmissing\b.*\bfield\b",
-                    r"\binvalid\b.*\bformat\b",
-                    r"\bformat\b.*\bmismatch\b"
+                    # Format errors
+                    r"\bmissing\s+required\s+field\b",
+                    r"\bformat\s+mismatch\b",
+                    r"\binvalid\s+invoice\s+format\b",
+                    r"\bincomplete\s+invoice\b",
+                    r"\bformat\s+requirements\s+not\s+met\b",
+                    r"\bmandatory\s+fields?\s+missing\b"
                 ],
 
                 "Inquiry/Redirection": [
-                    # Redirections and questions with word boundaries
-                    r"\bplease\b.*\badvise\b",
-                    r"\bneed\b.*\bguidance\b",
-                    r"\bcontact\b.*\binstead\b",
-                    r"\bwhat\b.*\bvendor\b",
-                    r"\breached\b.*\bout\b.*\bto\b.*\bowner\b",
-                    r"\bwhat\b.*\bis\b.*\bthe\b.*\bservicing\b.*\baddress\b"
+                    # Questions and redirections
+                    r"\bplease\s+advise\b",
+                    r"\bneed\s+guidance\b",
+                    r"\bcontact\s+.*instead\b",
+                    r"\bwhat\s+vendor\b",
+                    r"\bwhere\s+to\s+send\s+payment\b",
+                    r"\bwhat\s+documentation\s+needed\b",
+                    r"\bverify\s+legitimate\b",
+                    r"\bguidance\s+required\b"
                 ],
 
                 "Complex Queries": [
-                    # Legal and complex matters with word boundaries
-                    r"\bsettlement\b",
-                    r"\battorney\b",
-                    r"\blegal\b",
-                    r"\bminimum\b.*\bsettlement\b.*\bamount\b",
-                    r"\bcomplex\b.*\bbusiness\b.*\binstructions\b"
+                    # Legal and complex matters
+                    r"\bsettlement\s+arrangement\b",
+                    r"\blegal\s+settlement\b",
+                    r"\battorney\s+settlement\b",
+                    r"\bcomplex\s+business\s+instructions\b",
+                    r"\brouting\s+instructions\b",
+                    r"\bmulti\s+step\s+process\b",
+                    r"\blegal\s+proceedings\b",
+                    r"\bmediation\s+settlement\b"
                 ]
             },
     
             "No Reply (with/without info)": {
                 "Sales/Offers": [
-                    # Marketing content with word boundaries
-                    r"\bspecial\b.*\boffer\b",
-                    r"\blimited\b.*\btime\b",
-                    r"\bpromotional\b",
-                    r"\bdiscount\b",
-                    r"\bsale\b.*\bending\b",
-                    r"\bkiller\b.*\bsales\b.*\bsamples\b",
-                    r"\bmake\b.*\bsamples\b.*\bthat\b.*\bsell\b",
-                    r"\bbusiness\b.*\bguide\b"
+                    # Marketing and sales
+                    r"\bspecial\s+offer\b",
+                    r"\blimited\s+time\s+offer\b",
+                    r"\bpromotional\s+offer\b",
+                    r"\bdiscount\s+offer\b",
+                    r"\bexclusive\s+deal\b",
+                    r"\bprices?\s+increasing\b",
+                    r"\bsale\s+ending\b",
+                    r"\bpayment\s+plan\s+options\b",
+                    r"\binstallment\s+plan\b",
+                    r"\bfinancing\s+options\b"
                 ],
 
                 "System Alerts": [
-                    # System notifications with word boundaries
-                    r"\bsystem\b.*\bnotification\b",
-                    r"\bpassword\b.*\bexpires\b",
-                    r"\bmaintenance\b",
-                    r"\bpassword\b.*\bfor\b.*\baccount\b.*\bexpires\b"
+                    # System notifications
+                    r"\bsystem\s+notification\b",
+                    r"\bpassword\s+.*expires\b",
+                    r"\bmaintenance\s+notification\b",
+                    r"\bsecurity\s+alert\b",
+                    r"\bserver\s+maintenance\b"
                 ],
 
                 "Processing Errors": [
-                    # System errors with word boundaries
-                    r"\bprocessing\b.*\berror\b",
-                    r"\bfailed\b.*\bto\b.*\bprocess\b",
-                    r"\bdelivery\b.*\bfailed\b",
-                    r"\binvoice\b.*\brejected\b",
-                    r"\binvoices\b.*\bwill\b.*\bnot\b.*\bbe\b.*\bprocessed\b"
+                    # System processing errors
+                    r"\bprocessing\s+error\b",
+                    r"\bfailed\s+to\s+process\b",
+                    r"\bdelivery\s+failed\b",
+                    r"\belectronic\s+invoice\s+rejected\b",
+                    r"\bmail\s+delivery\s+failed\b",
+                    r"\bsystem\s+unable\s+to\s+process\b",
+                    r"\bcannot\s+be\s+processed\b"
                 ],
 
-                "General (Thank You)": [
-                    # Acknowledgments with word boundaries
-                    r"\bthank\b.*\byou\b",
-                    r"\backnowledgment\b",
-                    r"\breceived\b",
-                    r"\bthank\b.*\byou\b.*\bfor\b.*\breaching\b.*\bout\b",
-                    r"\bclosing\b.*\bthis\b.*\brequest\b",
-                    r"\bno\b.*\blonger\b.*\bmanage\b"
+                "Business Closure (Info only)": [
+                    # Informational closure notices
+                    r"\bbusiness\s+closure\s+information\b",
+                    r"\bclosure\s+notification\s+only\b",
+                    r"\binformational\s+closure\b",
+                    r"\bstore\s+closing\s+notice\b"
                 ],
 
                 "Created": [
-                    # Ticket creation with word boundaries
-                    r"\bticket\b.*\bcreated\b",
-                    r"\bcase\b.*\bopened\b",
-                    r"\brequest\b.*\bcreated\b",
-                    r"\bquery\b.*\breceived\b.*\bticket\b"
+                    # Ticket creation
+                    r"\bticket\s+created\b",
+                    r"\bcase\s+opened\b",
+                    r"\bnew\s+ticket\s+opened\b",
+                    r"\bsupport\s+request\s+created\b",
+                    r"\bcase\s+number\s+assigned\b",
+                    r"\bticket\s+submitted\s+successfully\b"
                 ],
 
                 "Resolved": [
-                    # Case resolution with word boundaries
-                    r"\bresolved\b",
-                    r"\bclosed\b",
-                    r"\bcompleted\b",
-                    r"\bcase\b.*\bhas\b.*\bbeen\b.*\bresolved\b",
-                    r"\bthis\b.*\bhas\b.*\bbeen\b.*\bresolved\b",
-                    r"\baccount\b.*\bwas\b.*\bpaid\b.*\band\b.*\bclosed\b"
+                    # Case resolution
+                    r"\bticket\s+resolved\b",
+                    r"\bcase\s+resolved\b",
+                    r"\bcase\s+closed\b",
+                    r"\bmarked\s+as\s+resolved\b",
+                    r"\bissue\s+resolved\b",
+                    r"\brequest\s+completed\b"
                 ],
 
                 "Open": [
-                    # Open status with word boundaries
-                    r"\bpending\b",
-                    r"\bin\b.*\bprogress\b",
-                    r"\bopen\b"
+                    # Open ticket status
+                    r"\bticket\s+open\b",
+                    r"\bcase\s+pending\b",
+                    r"\bunder\s+investigation\b",
+                    r"\bbeing\s+processed\b",
+                    r"\bin\s+progress\b"
                 ]
             },
     
             "Invoices Request": {
                 "Request (No Info)": [
-                    # Core invoice requests with word boundaries
-                    r"\bprovide\b.*\binvoices?\b.*\bcopies\b",
-                    r"\bsend\b.*\bme\b.*\bthe\b.*\binvoices?\b",
-                    r"\bneed\b.*\binvoices?\b.*\bcopy\b",
-                    r"\bshare\b.*\binvoices?\b",
-                    r"\bforward\b.*\binvoices?\b",
-                    r"\bprovide\b.*\boutstanding\b.*\binvoices?\b",
-                    r"\bshare\b.*\bthe\b.*\bpast\b.*\bdue\b.*\binvoice\b.*\bcopy\b",
-                    r"\bsend\b.*\bme\b.*\bthe\b.*\brelevant\b.*\binvoices\b",
-                    r"\bsend\b.*\bcopies\b.*\bof\b.*\boutstanding\b.*\binvoices\b",
-                    r"\bcan\b.*\byou\b.*\bsed\b.*\bme\b.*\bthe\b.*\binvoices\b",
-                    r"\bneed\b.*\ba\b.*\bbreakdown\b.*\bby\b.*\binvoice\b"
+                    # Invoice requests
+                    r"\bsend\s+me\s+the\s+invoices?\b",
+                    r"\bprovide\s+.*invoices?\s+copies?\b",
+                    r"\bneed\s+invoices?\s+copies?\b",
+                    r"\bshare\s+invoices?\s+copies?\b",
+                    r"\bforward\s+invoices?\s+copies?\b",
+                    r"\bprovide\s+outstanding\s+invoices?\b",
+                    r"\bcopies\s+of\s+.*invoices?\b",
+                    r"\bneed\s+a\s+breakdown\s+by\s+invoice\b"
                 ]
             },
 
             "Payments Claim": {
                 "Claims Paid (No Info)": [
-                    # Payment claims without proof with word boundaries
-                    r"\balready\b.*\bpaid\b",
-                    r"\bpayment\b.*\bwas\b.*\bmade\b",
-                    r"\bwe\b.*\bpaid\b",
-                    r"\bthis\b.*\bwas\b.*\bpaid\b",
-                    r"\bmade\b.*\bthe\b.*\bpayment\b",
-                    r"\baccount\b.*\bwas\b.*\bpaid\b",
-                    r"\bthis\b.*\baccount\b.*\bwas\b.*\bpaid\b",
-                    r"\bhas\b.*\bbeen\b.*\bpaid\b.*\bvia\b.*\bcredit\b.*\bcard\b",
-                    r"\bpaid\b.*\bfor\b.*\beverything\b.*\bup\b.*\bfront\b",
-                    r"\bhas\b.*\bbeen\b.*\bpaid\b.*\bdirectly\b"
+                    # Payment claims without proof
+                    r"\balready\s+paid\b",
+                    r"\bpayment\s+was\s+made\b",
+                    r"\bwe\s+paid\b",
+                    r"\bthis\s+was\s+paid\b",
+                    r"\baccount\s+was\s+paid\b",
+                    r"\bhas\s+been\s+paid\b",
+                    r"\bcheck\s+was\s+sent\b",
+                    r"\bpayment\s+completed\b",
+                    r"\binvoice\s+settled\b"
                 ],
                 
                 "Payment Confirmation": [
-                    # Payment with proof with word boundaries
-                    r"\bproof\b.*\bof\b.*\bpayment\b",
-                    r"\bpayment\b.*\battached\b",
-                    r"\breceipt\b.*\battached\b",
-                    r"\bcheck\b.*\bnumber\b",
-                    r"\btransaction\b.*\bid\b",
-                    r"\bpaid\b.*\bsee\b.*\battachments\b",
-                    r"\bpayment\b.*\breceipt\b.*\bis\b.*\battached\b",
-                    r"\bsent\b.*\bproof\b.*\bseveral\b.*\btimes\b",
-                    r"\blast\b.*\b4\b.*\bdigits\b.*\bof\b.*\bach\b.*\bpayment\b.*\bid\b",
-                    r"\bacopy\b.*\bof\b.*\bthe\b.*\bpayment\b.*\breceipt\b.*\bis\b.*\battached\b"
+                    # Payment with proof
+                    r"\bproof\s+of\s+payment\s+attached\b",
+                    r"\bpayment\s+confirmation\s+attached\b",
+                    r"\breceipt\s+attached\b",
+                    r"\bcheck\s+number\s+\d+\b",
+                    r"\btransaction\s+id\s+\w+\b",
+                    r"\bach\s+payment\s+id\b",
+                    r"\blast\s+4\s+digits\b",
+                    r"\breceipt\s+is\s+attached\b",
+                    r"\bpayment\s+id\s+are\s+\d+\b",
+                    r"\beft#\s+\w+\b",
+                    r"\bwire\s+confirmation\b",
+                    r"\bbatch\s+number\b",
+                    r"\bpaid\s+see\s+attachments\b",
+                    r"\bhere\s+is\s+proof\s+of\s+payment\b"
                 ],
 
                 "Payment Details Received": [
-                    # Future/pending payments with word boundaries
-                    r"\bpayment\b.*\bwill\b.*\bbe\b.*\bsent\b",
-                    r"\bpayment\b.*\bbeing\b.*\bprocessed\b",
-                    r"\bworking\b.*\bon\b.*\bpayment\b",
-                    r"\bpayment\b.*\bis\b.*\bawaiting\b",
-                    r"\bpayment\b.*\bis\b.*\bawaiting\b.*\binformation\b"
+                    # Future/pending payments
+                    r"\bpayment\s+will\s+be\s+sent\b",
+                    r"\bpayment\s+being\s+processed\b",
+                    r"\bworking\s+on\s+payment\b",
+                    r"\bpayment\s+scheduled\b",
+                    r"\bwill\s+pay\s+.*online\b",
+                    r"\binvoices?\s+being\s+processed\s+for\s+payment\b"
                 ]
             },
 
             "Auto Reply (with/without info)": {
                 "With Alternate Contact": [
-                    # OOO with contact info with word boundaries
-                    r"\bout\b.*\bof\b.*\boffice\b.*\bcontact\b",
-                    r"\balternate\b.*\bcontact\b",
-                    r"\bemergency\b.*\bcontact\b",
-                    r"\bcontact\b.*\bme\b.*\bat\b"
+                    # OOO with contact info
+                    r"\balternate\s+contact\b",
+                    r"\bemergency\s+contact\b",
+                    r"\bcontact\s+me\s+at\b",
+                    r"\bfor\s+urgent\s+matters\s+contact\b",
+                    r"\bimmediate\s+assistance\s+contact\b"
                 ],
 
                 "Return Date Specified": [
-                    # OOO with return date with word boundaries
-                    r"\breturn\b.*\bon\b",
-                    r"\bback\b.*\bon\b",
-                    r"\bout\b.*\buntil\b",
-                    r"\breturning\b.*\bon\b",
-                    r"\bwill\b.*\bbe\b.*\bout\b.*\bof\b.*\bthe\b.*\boffice\b.*\bmonday\b",
-                    r"\brespond\b.*\bto\b.*\byour\b.*\bemails\b.*\bupon\b.*\bmy\b.*\breturn\b"
+                    # OOO with return date
+                    r"\breturn\s+on\s+\w+\b",
+                    r"\bback\s+on\s+\w+\b",
+                    r"\breturning\s+on\s+\w+\b",
+                    r"\bout\s+until\s+\w+\b",
+                    r"\baway\s+until\s+\w+\b",
+                    r"\bexpected\s+return\s+date\b",
+                    r"\bback\s+from\s+vacation\s+on\b"
                 ],
 
                 "No Info/Autoreply": [
-                    # Generic auto-replies with word boundaries
-                    r"\bout\b.*\bof\b.*\boffice\b",
-                    r"\bautomatic\b.*\breply\b",
+                    # Generic auto-replies
+                    r"\bout\s+of\s+office\b",
+                    r"\bautomatic\s+reply\b",
                     r"\bauto-?reply\b",
-                    r"\baway\b.*\bfrom\b.*\bdesk\b"
+                    r"\baway\s+from\s+desk\b",
+                    r"\bcurrently\s+out\b",
+                    r"\blimited\s+access\s+to\s+email\b"
                 ],
 
                 "Survey": [
-                    # Surveys and feedback with word boundaries
+                    # Surveys and feedback
                     r"\bsurvey\b",
-                    r"\bfeedback\b",
-                    r"\brate\b.*\bour\b.*\bservice\b"
+                    r"\bfeedback\s+request\b",
+                    r"\brate\s+our\s+service\b",
+                    r"\bcustomer\s+satisfaction\b",
+                    r"\btake\s+our\s+survey\b",
+                    r"\bservice\s+evaluation\b"
                 ],
 
                 "Redirects/Updates (property changes)": [
-                    # Contact changes with word boundaries
-                    r"\bno\b.*\blonger\b.*\bemployed\b",
-                    r"\bcontact\b.*\bchanged\b",
-                    r"\bquit\b.*\bcontacting\b",
-                    r"\bproperty\b.*\bmanager\b.*\bchanged\b",
-                    r"\bplease\b.*\bquit\b.*\bcontacting\b.*\bme\b",
-                    r"\bdo\b.*\bnot\b.*\bcontact\b.*\bme\b.*\bfurther\b",
-                    r"\brefrain\b.*\bfrom\b.*\bcontacting\b"
+                    # Contact changes
+                    r"\bno\s+longer\s+employed\b",
+                    r"\bcontact\s+changed\b",
+                    r"\bproperty\s+manager\s+changed\b",
+                    r"\bemail\s+address\s+changed\b",
+                    r"\bcontact\s+information\s+updated\b",
+                    r"\bplease\s+quit\s+contacting\b",
+                    r"\bdo\s+not\s+contact\s+me\s+further\b"
                 ]
             }
         }
@@ -283,7 +319,7 @@ class PatternMatcher:
                 ]
         
         pattern_count = sum(len(subcats) for subcats in self.compiled_patterns.values())
-        self.logger.info(f"✅ Compiled {pattern_count} simplified pattern groups")
+        self.logger.info(f"✅ Compiled {pattern_count} strong pattern groups")
 
     def _initialize_mappings(self) -> None:
         """Initialize category mappings."""
@@ -296,22 +332,23 @@ class PatternMatcher:
             "Auto Reply (with/without info)": "Auto Reply (with/without info)"
         }
         
-        # All sublabel mappings
+        # All sublabel mappings (removed General Thank You)
         self.sublabels = {
             # Manual Review
             "Partial/Disputed Payment": "Partial/Disputed Payment",
             "Invoice Receipt": "Invoice Receipt", 
             "Closure Notification": "Closure Notification",
+            "Closure + Payment Due": "Closure + Payment Due",
             "External Submission": "External Submission",
             "Invoice Errors (format mismatch)": "Invoice Errors (format mismatch)",
             "Inquiry/Redirection": "Inquiry/Redirection",
             "Complex Queries": "Complex Queries",
             
-            # No Reply
+            # No Reply (removed General Thank You)
             "Sales/Offers": "Sales/Offers",
             "System Alerts": "System Alerts",
             "Processing Errors": "Processing Errors", 
-            "General (Thank You)": "General (Thank You)",
+            "Business Closure (Info only)": "Business Closure (Info only)",
             "Created": "Created",
             "Resolved": "Resolved",
             "Open": "Open",
@@ -333,7 +370,7 @@ class PatternMatcher:
         }
 
     def match_text(self, text: str, exclude_external_proof: bool = False) -> Tuple[Optional[str], Optional[str], float, List[str]]:
-        """Main pattern matching with simplified conflict resolution."""
+        """Main pattern matching with enhanced conflict resolution."""
         if not text or len(text.strip()) < 5:
             return None, None, 0.0, []
         
@@ -364,7 +401,7 @@ class PatternMatcher:
         if not all_matches:
             return None, None, 0.0, []
         
-        # Simplified conflict resolution
+        # Enhanced conflict resolution
         best_match = self._resolve_conflicts(all_matches, text_lower)
         
         if best_match:
@@ -378,52 +415,79 @@ class PatternMatcher:
         return None, None, 0.0, []
 
     def _resolve_conflicts(self, matches: List[Dict], text: str) -> Optional[Dict]:
-        """Simplified conflict resolution with core business logic."""
+        """Enhanced conflict resolution with strong business logic."""
         if not matches:
             return None
         
         if len(matches) == 1:
             return matches[0]
         
-        # Priority resolution rules
+        # Priority resolution rules - Enhanced
         
-        # 1. Dispute patterns override everything
+        # 1. Dispute patterns have highest priority
         dispute_match = next((m for m in matches if m['subcat'] == 'Partial/Disputed Payment'), None)
         if dispute_match:
             return dispute_match
         
-        # 2. Payment with proof vs without proof
+        # 2. Payment proof vs claims - Enhanced detection
         payment_conf = next((m for m in matches if m['subcat'] == 'Payment Confirmation'), None)
         payment_claim = next((m for m in matches if m['subcat'] == 'Claims Paid (No Info)'), None)
         
         if payment_conf and payment_claim:
-            # Check for proof indicators
-            proof_indicators = ['attached', 'proof', 'receipt', 'number', 'id']
+            # Strong proof indicators
+            proof_indicators = [
+                'attached', 'proof', 'receipt', 'number', 'id', 'confirmation',
+                'transaction', 'check number', 'eft#', 'wire', 'batch'
+            ]
             has_proof = any(indicator in text for indicator in proof_indicators)
             return payment_conf if has_proof else payment_claim
         
-        # 3. Invoice request vs payment claim
-        invoice_req = next((m for m in matches if m['subcat'] == 'Request (No Info)'), None)
-        if invoice_req and payment_claim:
-            # Favor invoice request if asking for invoices
-            if any(phrase in text for phrase in ['provide invoice', 'send invoice', 'need invoice']):
-                return invoice_req
-            return payment_claim
+        # 3. Invoice receipt vs request
+        invoice_receipt = next((m for m in matches if m['subcat'] == 'Invoice Receipt'), None)
+        invoice_request = next((m for m in matches if m['subcat'] == 'Request (No Info)'), None)
         
-        # 4. Manual Review takes priority over Auto Reply for business content
+        if invoice_receipt and invoice_request:
+            # Check if providing vs requesting
+            providing_indicators = ['attached', 'here is', 'copy attached', 'proof']
+            requesting_indicators = ['send me', 'provide', 'need', 'share']
+            
+            is_providing = any(indicator in text for indicator in providing_indicators)
+            is_requesting = any(indicator in text for indicator in requesting_indicators)
+            
+            if is_providing and not is_requesting:
+                return invoice_receipt
+            elif is_requesting and not is_providing:
+                return invoice_request
+        
+        # 4. Business content overrides auto-reply
         manual = next((m for m in matches if m['main_cat'] == 'Manual Review'), None)
         auto_reply = next((m for m in matches if m['main_cat'] == 'Auto Reply (with/without info)'), None)
         
         if manual and auto_reply:
-            business_terms = ['payment', 'invoice', 'dispute', 'collection']
-            business_count = sum(1 for term in business_terms if term in text)
-            return manual if business_count >= 2 else auto_reply
+            # Strong business terms
+            strong_business = ['payment', 'invoice', 'dispute', 'collection', 'debt', 'billing']
+            business_count = sum(1 for term in strong_business if term in text)
+            
+            # Business content takes priority unless clear OOO context
+            ooo_context = any(phrase in text for phrase in ['out of office', 'away from desk', 'on vacation'])
+            if business_count >= 2 and not ooo_context:
+                return manual
+            elif ooo_context and business_count < 2:
+                return auto_reply
         
-        # 5. Highest confidence wins
+        # 5. Survey vs other classifications
+        survey_match = next((m for m in matches if m['subcat'] == 'Survey'), None)
+        if survey_match:
+            # Only choose survey if no strong business context
+            business_matches = [m for m in matches if m['main_cat'] in ['Manual Review', 'Payments Claim', 'Invoices Request']]
+            if not business_matches:
+                return survey_match
+        
+        # 6. Return highest confidence and match count
         return max(matches, key=lambda x: (x['confidence'], x['match_count']))
 
     def get_pattern_stats(self) -> Dict[str, int]:
-        """Get simplified pattern statistics."""
+        """Get pattern statistics."""
         stats = {}
         for main_cat, subcats in self.patterns.items():
             total = sum(len(patterns) for patterns in subcats.values())

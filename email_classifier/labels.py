@@ -1,5 +1,6 @@
 """
 Clean and simple email classification label hierarchy.
+Removed General (Thank You) and optimized structure.
 """
 
 import logging
@@ -22,7 +23,7 @@ class LabelHierarchy:
         self.logger.info("✅ Label hierarchy initialized")
 
     def _create_hierarchy(self) -> Label:
-        """Create the hierarchy structure."""
+        """Create the hierarchy structure - Updated without General (Thank You)."""
         return Label(
             name="Root (Inbox)",
             description="Entry point for all emails",
@@ -34,55 +35,58 @@ class LabelHierarchy:
                         Label(
                             name="Disputes & Payments",
                             description="Payment disputes and partial payment cases",
-                            sublabels=[Label(name="Partial/Disputed Payment", description="Payment disputes")]
+                            sublabels=[
+                                Label(name="Partial/Disputed Payment", description="Payment disputes and contested charges")
+                            ]
                         ),
                         Label(
                             name="Invoice Updates",
                             description="Updates related to invoices", 
-                            sublabels=[Label(name="Invoice Receipt", description="Invoice proof provided")]
+                            sublabels=[
+                                Label(name="Invoice Receipt", description="Providing proof of invoice received")
+                            ]
                         ),
                         Label(
                             name="Business Closure",
                             description="Business closure related notifications",
                             sublabels=[
-                                Label(name="Closure Notification", description="General closure notices"),
-                                Label(name="Closure + Payment Due", description="Closure with outstanding dues")
+                                Label(name="Closure Notification", description="General business closure notices"),
+                                Label(name="Closure + Payment Due", description="Business closure with outstanding payments")
                             ]
                         ),
                         Label(
                             name="Invoices",
                             description="Invoice related issues and submissions",
                             sublabels=[
-                                Label(name="External Submission", description="Invoice issues from third parties"),
-                                Label(name="Invoice Errors (format mismatch)", description="Missing fields/invalid formats")
+                                Label(name="External Submission", description="Third-party invoice submission issues"),
+                                Label(name="Invoice Errors (format mismatch)", description="Missing fields or invalid invoice formats")
                             ]
                         ),
-                        Label(name="Inquiry/Redirection", description="Redirections and alternate contacts"),
-                        Label(name="Complex Queries", description="Multiple topics requiring review")
+                        Label(name="Inquiry/Redirection", description="Questions and contact redirections"),
+                        Label(name="Complex Queries", description="Multiple topics requiring manual review")
                     ]
                 ),
                 Label(
                     name="No Reply (with/without info)",
-                    description="System-generated, marketing, informational mail",
+                    description="System-generated, marketing, and informational emails",
                     sublabels=[
                         Label(
                             name="Notifications",
                             description="System and business notifications",
                             sublabels=[
-                                Label(name="Sales/Offers", description="Promotions and marketing"),
-                                Label(name="System Alerts", description="System notifications"),
-                                Label(name="Processing Errors", description="System failure notifications"),
-                                Label(name="Business Closure (Info only)", description="Closure announcements"),
-                                Label(name="General (Thank You)", description="Acknowledgments")
+                                Label(name="Sales/Offers", description="Promotions and marketing content"),
+                                Label(name="System Alerts", description="System notifications and alerts"),
+                                Label(name="Processing Errors", description="System failure and processing error notifications"),
+                                Label(name="Business Closure (Info only)", description="Informational closure announcements")
                             ]
                         ),
                         Label(
                             name="Tickets/Cases",
                             description="Support ticket and case related notifications",
                             sublabels=[
-                                Label(name="Created", description="New ticket notifications"),
-                                Label(name="Resolved", description="Closed ticket notifications"),
-                                Label(name="Open", description="Open ticket updates")
+                                Label(name="Created", description="New ticket creation notifications"),
+                                Label(name="Resolved", description="Ticket resolution notifications"),
+                                Label(name="Open", description="Open ticket status updates")
                             ]
                         )
                     ]
@@ -90,41 +94,43 @@ class LabelHierarchy:
                 Label(
                     name="Invoices Request",
                     description="Requests for invoice information",
-                    sublabels=[Label(name="Request (No Info)", description="Invoice request missing info")]
+                    sublabels=[
+                        Label(name="Request (No Info)", description="Invoice requests without sufficient information")
+                    ]
                 ),
                 Label(
                     name="Payments Claim",
                     description="Claims related to payments", 
                     sublabels=[
-                        Label(name="Claims Paid (No Info)", description="Payment claims without proof"),
-                        Label(name="Payment Details Received", description="Payment details for manual check"),
-                        Label(name="Payment Confirmation", description="Payment proof provided")
+                        Label(name="Claims Paid (No Info)", description="Payment claims without supporting proof"),
+                        Label(name="Payment Details Received", description="Payment details requiring manual verification"),
+                        Label(name="Payment Confirmation", description="Payment claims with supporting proof")
                     ]
                 ),
                 Label(
                     name="Auto Reply (with/without info)",
-                    description="Automated responses",
+                    description="Automated responses and out-of-office messages",
                     sublabels=[
                         Label(
                             name="Out of Office",
                             description="Out of office notifications",
                             sublabels=[
-                                Label(name="With Alternate Contact", description="OOO with alternative contact"),
-                                Label(name="No Info/Autoreply", description="Generic OOO messages"),
-                                Label(name="Return Date Specified", description="OOO with return date")
+                                Label(name="With Alternate Contact", description="OOO with alternative contact information"),
+                                Label(name="No Info/Autoreply", description="Generic OOO and auto-reply messages"),
+                                Label(name="Return Date Specified", description="OOO with specific return date")
                             ]
                         ),
                         Label(
                             name="Miscellaneous",
                             description="Other automated responses",
                             sublabels=[
-                                Label(name="Survey", description="Feedback requests"),
-                                Label(name="Redirects/Updates (property changes)", description="Contact/property changes")
+                                Label(name="Survey", description="Feedback requests and surveys"),
+                                Label(name="Redirects/Updates (property changes)", description="Contact changes and redirections")
                             ]
                         )
                     ]
                 ),
-                Label(name="Uncategorized", description="Flag for Review/Retraining")
+                Label(name="Uncategorized", description="Emails requiring review and retraining")
             ]
         )
 
